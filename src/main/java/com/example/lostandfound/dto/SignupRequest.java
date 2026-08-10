@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-// record 로 생성자, Getter, toString 등 자동 생성
+// record 로 생성자, 접근자, toString 등 자동 생성
 public record SignupRequest(
 
         // 이메일 형식 검사
