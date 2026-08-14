@@ -1,4 +1,4 @@
-package com.example.lostandfound.dto;
+package com.example.lostandfound.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
