@@ -1,7 +1,6 @@
 package com.example.lostandfound.security;
 
 import com.example.lostandfound.entity.Member;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,20 +8,37 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-@RequiredArgsConstructor
+
 public class CustomUserDetails implements UserDetails {
 
+    private final Long id;
     private final Member member;
+    private final String password;
 
     // 원본 엔티티 접근용
     public Member getMember() {
         return member;
     }
 
+    // 로그인 용(DB 조회한 엔티티로 생성)
+    public CustomUserDetails(Member member) {
+        this.id = member.getId();
+        this.password = member.getPassword();
+        this.member = member;
+    }
+
+    // 필터용(토큰의 id 만으로 생성)
+    public CustomUserDetails(Long id) {
+        this.id = id;
+        this.password = null;
+        this.member = null;
+    }
+
+
     // 편의 메서드
     // Id를 Long 타입 그대로 꺼냄
     public Long getMemberId() {
-        return member.getId();
+        return id;
     }
 
     // 사용자 권한 목록
@@ -39,14 +55,14 @@ public class CustomUserDetails implements UserDetails {
     // DB에 저장된 BCrypt 해시값을 반환
     @Override
     public String getPassword() {
-        return member.getPassword();
+        return password;
     }
 
     // 사용자 주체
     // 이메일이 아닌 Id(PK)를 반환
     @Override
     public String getUsername() {
-        return String.valueOf(member.getId());
+        return String.valueOf(id);
     }
 
 }
