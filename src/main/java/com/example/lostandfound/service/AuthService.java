@@ -1,0 +1,88 @@
+package com.example.lostandfound.service;
+
+import com.example.lostandfound.dto.request.LoginRequest;
+import com.example.lostandfound.dto.response.LoginResponse;
+import com.example.lostandfound.exception.CustomException;
+import com.example.lostandfound.exception.ErrorCode;
+import com.example.lostandfound.jwt.JwtProperties;
+import com.example.lostandfound.jwt.JwtTokenProvider;
+import com.example.lostandfound.security.CustomUserDetails;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
+
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProperties jwtProperties;
+    private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
+
+    // 로그인 결과를 담는 내부 전달용 객체
+    public record LoginResult(LoginResponse response, ResponseCookie cookie) {
+
+    }
+
+    public LoginResult login(LoginRequest request) {
+
+        // 잠긴 계정은 인증 시도를 하지 않음
+        if (loginAttemptService.locked(request.email())) {
+            throw new CustomException(ErrorCode.ACCOUNT_LOCKED);
+        }
+
+        Authentication authentication = authenticate(request);
+
+        // 인증 성공(실패 카운트 초기화)
+        loginAttemptService.reset(request.email());
+
+        String accessToken = jwtTokenProvider.createAccessToken(authentication);
+        String refreshToken = jwtTokenProvider.createRefreshToken(authentication);
+
+        // 리프레시 토큰을 SHA-256 해시로 Redis에 저장
+        Long id = ((CustomUserDetails) authentication.getPrincipal()).getMemberId();
+        refreshTokenService.save(id, refreshToken);
+
+        return new LoginResult(
+                LoginResponse.of(accessToken, jwtProperties.accessTokenExpiration()),
+                buildRefreshTokenCookie(refreshToken)
+        );
+    }
+
+    // 이메일, 비밀번호 인증 수행(실패시 카운트를 올리고 401 반환)
+    private Authentication authenticate(LoginRequest request) {
+        try {
+            // 아직 인증되지 않은 요청 객체
+            return authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (AuthenticationException e) {
+            loginAttemptService.recordFailure(request.email());
+
+            // 회원 없음과 비밀번호 불일치를 구분하지 않음
+            // 열거 공격 방어
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        }
+    }
+
+    // 리프레시 토큰을 담을 httpOnly 쿠키 생성
+    private ResponseCookie buildRefreshTokenCookie(String refreshToken) {
+    return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
+            .httpOnly(true) // JS 접근 차단(XSS 방어)
+            .secure(true) // HTTPS에서만 전송(테스트 시 false 필요)
+            .sameSite("Strict") // 외부 사이트 요청에 미첨부(CSRF 방어)
+            .path("/api/auth") // 인증 관련 경로에만 전송
+            .maxAge(Duration.ofMillis(jwtProperties.refreshTokenExpiration()))
+            .build();
+    }
+}
