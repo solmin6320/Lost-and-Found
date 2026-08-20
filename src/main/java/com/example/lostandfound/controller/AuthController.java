@@ -5,7 +5,6 @@ import com.example.lostandfound.dto.request.SignupRequest;
 import com.example.lostandfound.dto.response.LoginResponse;
 import com.example.lostandfound.dto.response.SignupResponse;
 import com.example.lostandfound.service.AuthService;
-import com.example.lostandfound.service.LoginAttemptService;
 import com.example.lostandfound.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
