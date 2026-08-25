@@ -44,7 +44,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                // 토큰을 쿠키로 전달하지 않으므로 CSRF 방어를 꺼둠
+                // 액세스 토큰을 쿠키로 전달하지 않으므로 CSRF 방어를 꺼둠
                 .csrf(csrf -> csrf.disable())
 
                 // 리프레시 토큰을 위해 CORS 설정 적용

@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final PasswordEncoder passwordEncoder; // BCrypt 해시 생성용(Bean 등록은 SecurityConfig에서 추가할 예정)
+    private final PasswordEncoder passwordEncoder; // BCrypt 해시 생성용
 
     // 트랜잭션으로 중간에 예외 발생 시 지금까지의 DB 변경을 롤백
     @Transactional
