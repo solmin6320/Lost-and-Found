@@ -1,5 +1,6 @@
 package com.example.lostandfound.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 // 모든 컨트롤러에서 발생하는 예외를 한곳에서 가로채 공통 형식으로 응답
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     // CustomException 예외 처리
@@ -38,6 +40,7 @@ public class GlobalExceptionHandler {
     // 예상하지 못한 모든 예외 처리(위 두 핸들러에 잡히지 않는 나머지 예외 전부)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handlerException(Exception e) {
+        log.error("처리되지 않은 예외", e); // 로그로 무조건 남기기
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR) // 500 HTTP 상태
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR));

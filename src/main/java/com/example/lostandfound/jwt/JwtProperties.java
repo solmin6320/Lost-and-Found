@@ -3,10 +3,10 @@ package com.example.lostandfound.jwt;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
-@Component
 @Validated // 검증 애노테이션을 실제로 동작시킴
 @ConfigurationProperties(prefix = "jwt")
 public record JwtProperties(
