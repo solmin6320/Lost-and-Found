@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// 인증 관련 API 진입점(로그인은 추가 예정)
+// 인증 관련 API 진입점
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
