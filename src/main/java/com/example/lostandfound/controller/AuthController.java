@@ -4,13 +4,16 @@ import com.example.lostandfound.dto.request.LoginRequest;
 import com.example.lostandfound.dto.request.SignupRequest;
 import com.example.lostandfound.dto.response.LoginResponse;
 import com.example.lostandfound.dto.response.SignupResponse;
+import com.example.lostandfound.security.CustomUserDetails;
 import com.example.lostandfound.service.AuthService;
 import com.example.lostandfound.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 // 인증 관련 API 진입점
@@ -44,7 +47,7 @@ public class AuthController {
                 .body(result.response());
     }
 
-    // Post /api/auth/reissue
+    // POST /api/auth/reissue
     // 액세스 토큰이 만료됐을 때 리프레시 토큰 쿠키만으로 재발급
     @PostMapping("/reissue")
     public ResponseEntity<LoginResponse> reissue(
@@ -56,6 +59,20 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, result.cookie().toString())
                 .body(result.response());
+    }
+
+    // POST /api/auth/logout
+    // 액세스 토큰 필요
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        // 인증이 보장된 경로이므로 null 체크 불필요
+        ResponseCookie cookie = authService.logout(userDetails.getMemberId());
+
+        // 돌려줄 본문이 없으므로 204(헤더는 함께 전달 가능)
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
     }
 
 
