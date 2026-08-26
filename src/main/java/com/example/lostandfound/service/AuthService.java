@@ -109,6 +109,29 @@ public class AuthService {
         );
     }
 
+    // 로그아웃(Redis의 리프레시 토큰 삭제 + 쿠키 만료)
+    public ResponseCookie logout(Long id) {
+
+        // 키가 없어도 예외가 아님(중복 로그아웃 허용)
+        refreshTokenService.delete(id);
+
+        return buildExpiredRefreshTokenCookie();
+    }
+
+    // 브라우저가 기존 쿠키를 버리도록 Max-Age=0으로 덮어씀
+    private ResponseCookie buildExpiredRefreshTokenCookie() {
+
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "") // 값은 비움
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/auth") // 발급 시와 동일
+                .maxAge(0) // 즉시 만료
+                .build();
+    }
+
+
+
     // 토큰 발급에 필요한 최소 인증 객체 구성
     private Authentication buildAuthentication(Long id) {
         CustomUserDetails userDetails = new CustomUserDetails(id);
