@@ -5,7 +5,7 @@ CREATE TABLE MEMBER (
                         nickname VARCHAR(20) NOT NULL UNIQUE,
                         created_at DATETIME NOT NULL,
                         updated_at DATETIME NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE POST (
                       post_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -21,7 +21,7 @@ CREATE TABLE POST (
                       created_at DATETIME NOT NULL,
                       updated_at DATETIME NULL,
                       CONSTRAINT fk_post_member FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE POST_IMAGE (
                             image_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -32,7 +32,7 @@ CREATE TABLE POST_IMAGE (
                             file_size INT NOT NULL,
                             created_at DATETIME NOT NULL,
                             CONSTRAINT fk_image_post FOREIGN KEY (post_id) REFERENCES POST(post_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE COMMENT (
                          comment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -42,4 +42,4 @@ CREATE TABLE COMMENT (
                          created_at DATETIME NOT NULL,
                          CONSTRAINT fk_comment_post FOREIGN KEY (post_id) REFERENCES POST(post_id),
                          CONSTRAINT fk_comment_member FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
