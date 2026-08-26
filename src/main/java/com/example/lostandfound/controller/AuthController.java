@@ -11,10 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 // 인증 관련 API 진입점
 @RestController
@@ -46,5 +43,20 @@ public class AuthController {
                 .header(HttpHeaders.SET_COOKIE, result.cookie().toString())
                 .body(result.response());
     }
+
+    // Post /api/auth/reissue
+    // 액세스 토큰이 만료됐을 때 리프레시 토큰 쿠키만으로 재발급
+    @PostMapping("/reissue")
+    public ResponseEntity<LoginResponse> reissue(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken) {
+
+        AuthService.LoginResult result = authService.reissue(refreshToken);
+
+        // 로그인과 동일한 형태(쿠키 = 리프레시, 바디 = 액세스)
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, result.cookie().toString())
+                .body(result.response());
+    }
+
 
 }
