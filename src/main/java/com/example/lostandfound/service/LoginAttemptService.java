@@ -32,13 +32,14 @@ public class LoginAttemptService {
         // INCR은 키가 없으면 0에서 시작해서 1을 반환(기존 TTL 유지)
         Long count = redisTemplate.opsForValue().increment(key);
 
-        // 첫 실패에만 TTL 설정
-        if (count != null && count == 1L) {
+        // 1회: 카운트 집계(30분) 시작
+        // 5회: 잠금 시작 시점부터 다시 30분을 보장
+        if (count != null && (count == 1L || count == MAX_ATTEMPTS)) {
             redisTemplate.expire(key, LOCK_DURATION);
         }
     }
 
-    // 로그인 성공 시 카운터 삭제
+    // 로그인 성공 시 카운트 삭제
     public void reset(String email) {
         redisTemplate.delete(buildKey(email));
     }

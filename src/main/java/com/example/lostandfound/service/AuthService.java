@@ -75,6 +75,53 @@ public class AuthService {
         }
     }
 
+    // 리프레시 토큰으로 액세스, 리프레시 재발급(로테이션)
+    public LoginResult reissue(String refreshToken) {
+
+        // validateToken을 먼저 호출해야 함(만료 토큰이 먼저 닿으면 401이 아닌 500이 됨)
+        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken) || !jwtTokenProvider.isRefreshToken(refreshToken)) { // 액세스 제출 차단
+
+            // 쿠키 없음, 만료, 위조, 종류 불일치를 구분하지 않음
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        
+        // 서명이 검증된 토큰이므로 sub를 신뢰할 수 있음
+        Long id = jwtTokenProvider.getMemberId(refreshToken);
+        
+        // Redis 해시와 대조(옛날 토큰 재사용을 차단)
+        if (!refreshTokenService.matches(id, refreshToken)) {
+
+            throw new CustomException(ErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
+        Authentication authentication = buildAuthentication(id);
+
+        String newAccessToken =
+                jwtTokenProvider.createAccessToken(authentication);
+        String newRefreshToken =
+                jwtTokenProvider.createRefreshToken(authentication);
+
+        // 같은 키를 덮어써 폐기와 발급을 한 번에 처리
+        refreshTokenService.save(id, newRefreshToken);
+
+        return new LoginResult(
+                LoginResponse.of(newAccessToken, jwtProperties.accessTokenExpiration()),
+                buildRefreshTokenCookie(newRefreshToken)
+        );
+    }
+
+    // 토큰 발급에 필요한 최소 인증 객체 구성
+    private Authentication buildAuthentication(Long id) {
+        CustomUserDetails userDetails = new CustomUserDetails(id);
+
+        return new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null, // 토큰으로 이미 검증됨
+                userDetails.getAuthorities()
+        );
+    }
+
+
+
     // 리프레시 토큰을 담을 httpOnly 쿠키 생성
     private ResponseCookie buildRefreshTokenCookie(String refreshToken) {
     return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
