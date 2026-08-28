@@ -1,6 +1,7 @@
 package com.example.lostandfound.config;
 
 import com.example.lostandfound.jwt.JwtAuthenticationFilter;
+import com.example.lostandfound.security.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     // BCrypt 해시(회원 가입 시 encode, 로그인 시 matches 사용)
     @Bean
@@ -57,6 +59,10 @@ public class SecurityConfig {
                 // 기본 폼 로그인 및 HTTP 인증 미사용
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+
+                        // 인증 실패를 401 + 공통 형식으로 응답
+                        .exceptionHandling(ex ->
+                                ex.authenticationEntryPoint(customAuthenticationEntryPoint))
 
                 // 경로별 접근 권한
                 .authorizeHttpRequests(auth -> auth
