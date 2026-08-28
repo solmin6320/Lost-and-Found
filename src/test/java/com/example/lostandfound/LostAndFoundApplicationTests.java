@@ -1,11 +1,14 @@
 package com.example.lostandfound;
 
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@Disabled("통합 테스트 환경(DB, Redis 등등) 준비 후 활성화 예정")
+@ActiveProfiles("local")
+@Tag("integration")
 class LostAndFoundApplicationTests {
 
     @Test
