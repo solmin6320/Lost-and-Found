@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "POST")
@@ -68,6 +70,14 @@ public class Post {
     // 수정일
     private LocalDateTime updatedAt;
 
+
+    // 첨부 이미지(최대 5장)
+    // cascade를 사용하여 게시글 저장, 삭제가 이미지에도 전파
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostImage> images = new ArrayList<>();
+
+
+
     // Builder로만 생성 가능하도록 강제
     @Builder
     private Post(Member member, PostType type, String title, String content,
@@ -84,4 +94,13 @@ public class Post {
         this.viewCount = 0;
         this.createdAt = LocalDateTime.now();
     }
+
+    // 양방향 연관관계 편의 메서드
+    public void addImage(PostImage image) {
+        this.images.add(image);
+        image.assignPost(this);
+    }
+
+
+
 }
