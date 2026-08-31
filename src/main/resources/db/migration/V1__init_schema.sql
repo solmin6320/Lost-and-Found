@@ -1,4 +1,4 @@
-CREATE TABLE MEMBER (
+CREATE TABLE member (
                         member_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                         email VARCHAR(100) NOT NULL UNIQUE,
                         password VARCHAR(60) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE MEMBER (
                         updated_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE POST (
+CREATE TABLE post (
                       post_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                       member_id BIGINT NOT NULL,
                       type VARCHAR(10) NOT NULL,
@@ -20,10 +20,10 @@ CREATE TABLE POST (
                       view_count INT NOT NULL DEFAULT 0,
                       created_at DATETIME NOT NULL,
                       updated_at DATETIME NULL,
-                      CONSTRAINT fk_post_member FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
+                      CONSTRAINT fk_post_member FOREIGN KEY (member_id) REFERENCES member(member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE POST_IMAGE (
+CREATE TABLE post_image (
                             image_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                             post_id BIGINT NOT NULL,
                             original_filename VARCHAR(255) NOT NULL,
@@ -31,15 +31,15 @@ CREATE TABLE POST_IMAGE (
                             file_path VARCHAR(500) NOT NULL,
                             file_size INT NOT NULL,
                             created_at DATETIME NOT NULL,
-                            CONSTRAINT fk_image_post FOREIGN KEY (post_id) REFERENCES POST(post_id)
+                            CONSTRAINT fk_image_post FOREIGN KEY (post_id) REFERENCES post(post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE COMMENT (
+CREATE TABLE comment (
                          comment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                          post_id BIGINT NOT NULL,
                          member_id BIGINT NOT NULL,
                          content VARCHAR(300) NOT NULL,
                          created_at DATETIME NOT NULL,
-                         CONSTRAINT fk_comment_post FOREIGN KEY (post_id) REFERENCES POST(post_id),
-                         CONSTRAINT fk_comment_member FOREIGN KEY (member_id) REFERENCES MEMBER(member_id)
+                         CONSTRAINT fk_comment_post FOREIGN KEY (post_id) REFERENCES post(post_id),
+                         CONSTRAINT fk_comment_member FOREIGN KEY (member_id) REFERENCES member(member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
