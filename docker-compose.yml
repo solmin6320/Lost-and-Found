@@ -1,0 +1,24 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: lostfound-mariadb
+    ports:
+      - "3306:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: localroot
+      MARIADB_DATABASE: lostfound
+      MARIADB_USER: lostfound
+      MARIADB_PASSWORD: localpass
+
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: lostfound-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  mariadb-data:
