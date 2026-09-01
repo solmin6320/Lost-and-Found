@@ -3,6 +3,7 @@ package com.example.lostandfound.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -35,6 +36,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST) // 검증 실패는 항상 400
                 .body(ErrorResponse.of(ErrorCode.INVALID_INPUT.name(),message));
+    }
+
+
+    // @PreAuthorize 거부 시 예외 처리(403)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
+
+        ErrorCode errorCode = ErrorCode.FORBIDDEN_ACCESS;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 403
+                .body(ErrorResponse.of(errorCode));
     }
 
     // 예상하지 못한 모든 예외 처리(위 두 핸들러에 잡히지 않는 나머지 예외 전부)
