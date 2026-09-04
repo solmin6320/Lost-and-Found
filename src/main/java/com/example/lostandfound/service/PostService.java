@@ -1,12 +1,16 @@
 package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.request.PostCreateRequest;
+import com.example.lostandfound.dto.request.PostSearchCondition;
+import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
 import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.entity.Post;
 import com.example.lostandfound.repository.MemberRepository;
 import com.example.lostandfound.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,5 +44,13 @@ public class PostService {
         Post postSaved = postRepository.save(post);
 
         return PostResponse.from(postSaved);
+    }
+
+    // 비로그인도 열람 가능
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> search(PostSearchCondition condition, Pageable pageable) {
+
+        return postRepository.search(condition, pageable)
+                .map(PostListResponse::from);
     }
 }
