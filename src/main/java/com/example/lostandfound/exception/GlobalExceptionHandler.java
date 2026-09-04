@@ -7,6 +7,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 // 모든 컨트롤러에서 발생하는 예외를 한곳에서 가로채 공통 형식으로 응답
 @RestControllerAdvice
@@ -50,7 +51,18 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(errorCode));
     }
 
-    // 예상하지 못한 모든 예외 처리(위 두 핸들러에 잡히지 않는 나머지 예외 전부)
+    // 존재하지 않는 경로에 대한 예외 처리
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException() {
+
+        ErrorCode errorCode = ErrorCode.RESOURCE_NOT_FOUND;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 404
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 예상하지 못한 모든 예외 처리
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handlerException(Exception e) {
         log.error("처리되지 않은 예외", e); // 로그로 무조건 남기기
