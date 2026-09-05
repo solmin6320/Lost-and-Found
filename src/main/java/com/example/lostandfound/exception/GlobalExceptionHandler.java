@@ -7,6 +7,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 // 모든 컨트롤러에서 발생하는 예외를 한곳에서 가로채 공통 형식으로 응답
@@ -59,6 +60,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 404
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // PathVariable 타입 불일치에 대한 예외 처리
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException() {
+
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 400
                 .body(ErrorResponse.of(errorCode));
     }
 
