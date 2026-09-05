@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -71,6 +72,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 400
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 경로는 맞지만 메서드가 다름에 대한 예외 처리
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException() {
+
+        ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 405
                 .body(ErrorResponse.of(errorCode));
     }
 
