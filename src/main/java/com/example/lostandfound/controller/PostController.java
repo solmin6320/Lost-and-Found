@@ -2,6 +2,7 @@ package com.example.lostandfound.controller;
 
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
+import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
 import com.example.lostandfound.security.CustomUserDetails;
@@ -43,5 +44,18 @@ public class PostController {
             ) {
 
         return ResponseEntity.ok(postService.search(condition, pageable));
+    }
+
+    // GET /api/posts/{id}
+    // 비로그인 요청도 들어올 수 있음
+    @GetMapping("/{id}")
+    public ResponseEntity<PostDetailResponse> detail(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+
+        Long memberId = (userDetails == null) ? null : userDetails.getMemberId();
+
+        return ResponseEntity.ok(postService.getDetail(id, memberId));
     }
 }
