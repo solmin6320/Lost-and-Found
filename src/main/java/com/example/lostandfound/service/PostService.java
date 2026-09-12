@@ -5,18 +5,25 @@ import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
+import com.example.lostandfound.dto.response.PostStatusResponse;
+import com.example.lostandfound.entity.Comment;
 import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.entity.Post;
+import com.example.lostandfound.entity.PostStatus;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
+import com.example.lostandfound.repository.CommentRepository;
 import com.example.lostandfound.repository.MemberRepository;
 import com.example.lostandfound.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +32,10 @@ public class PostService {
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
     private final PostViewService postViewService;
+    private final CommentRepository commentRepository;
+
+    // 상세 화면에 먼저 보여줄 댓글 수
+    private static final int COMMENT_PREVIEW_SIZE = 20;
 
     // 경로 규칙이 바뀌어도 스스로를 지키도록 선언
     @PreAuthorize("isAuthenticated()")
@@ -71,6 +82,35 @@ public class PostService {
         Post post = postRepository.findDetailById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        return PostDetailResponse.from(post);
+        // 이미지와 따로 조회
+        List<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAsc(
+                postId, PageRequest.of(0, COMMENT_PREVIEW_SIZE)
+        );
+
+        // 개수가 자명하므로 COUNT를 생략
+        long totalCommentCount = (comments.size() < COMMENT_PREVIEW_SIZE) ? comments.size() : commentRepository.countByPostId(postId);
+
+
+        return PostDetailResponse.from(post, comments, totalCommentCount);
+    }
+
+    // 소유자 검증이 필요하므로 처리
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public PostStatusResponse changeStatus(Long postId, PostStatus status, Long memberId) {
+
+        // 게시글 상태와 작성자를 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        // 작성자 본인만 변경 가능
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 전이 규칙 판단은 엔티티가 담당
+        post.changeStatus(status);
+
+        return PostStatusResponse.from(post);
     }
 }

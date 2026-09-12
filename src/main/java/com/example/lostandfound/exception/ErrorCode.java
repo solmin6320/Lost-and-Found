@@ -20,6 +20,7 @@ public enum ErrorCode {
     // 게시글, 댓글 예외 처리(404, 403)
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 게시글입니다"),
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "본인이 작성한 게시글, 댓글만 처리할 수 있습니다"),
+    INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "완료된 게시글은 상태를 되돌릴 수 없습니다"),
 
     // 이미지 예외 처리(400)
     INVALID_IMAGE_EXTENSION(HttpStatus.BAD_REQUEST, "허용되지 않는 이미지 확장자입니다."),
