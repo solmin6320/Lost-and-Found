@@ -1,13 +1,12 @@
 package com.example.lostandfound.dto.response;
 
-import com.example.lostandfound.entity.Post;
-import com.example.lostandfound.entity.PostCategory;
-import com.example.lostandfound.entity.PostStatus;
-import com.example.lostandfound.entity.PostType;
+import com.example.lostandfound.entity.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 // 상세 전용
 public record PostDetailResponse(
@@ -25,10 +24,12 @@ public record PostDetailResponse(
         int viewCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<PostImageResponse> images
+        List<PostImageResponse> images,
+         List<CommentResponse> comments,
+        long totalCommentCount
 ) {
 
-    public static PostDetailResponse from(Post post) {
+    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount) {
 
         return new PostDetailResponse(
                 post.getId(),
@@ -46,7 +47,11 @@ public record PostDetailResponse(
                 post.getUpdatedAt(),
                 post.getImages().stream() // fetch join으로 이미 로딩됨
                         .map(PostImageResponse::from)
-                        .toList()
+                        .toList(),
+                comments.stream()
+                        .map(CommentResponse::from)
+                        .toList(),
+                totalCommentCount
         );
     }
 }
