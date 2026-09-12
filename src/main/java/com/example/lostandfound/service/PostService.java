@@ -5,9 +5,11 @@ import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
+import com.example.lostandfound.dto.response.PostStatusResponse;
 import com.example.lostandfound.entity.Comment;
 import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.entity.Post;
+import com.example.lostandfound.entity.PostStatus;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.CommentRepository;
@@ -90,5 +92,25 @@ public class PostService {
 
 
         return PostDetailResponse.from(post, comments, totalCommentCount);
+    }
+
+    // 소유자 검증이 필요하므로 처리
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public PostStatusResponse changeStatus(Long postId, PostStatus status, Long memberId) {
+
+        // 게시글 상태와 작성자를 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        // 작성자 본인만 변경 가능
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 전이 규칙 판단은 엔티티가 담당
+        post.changeStatus(status);
+
+        return PostStatusResponse.from(post);
     }
 }
