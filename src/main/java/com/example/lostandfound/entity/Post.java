@@ -1,5 +1,7 @@
 package com.example.lostandfound.entity;
 
+import com.example.lostandfound.exception.CustomException;
+import com.example.lostandfound.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -101,6 +103,19 @@ public class Post {
         image.assignPost(this);
     }
 
+    // 상태 변경은 이 메서드로만 가능
+    public void changeStatus(PostStatus newStatus) {
 
+        if (this.status == newStatus) { // 같은 상태면 조기 리턴
+            return;
+        }
+
+        if (this.status == PostStatus.DONE) { // DONE은 최종 상태
+            throw new CustomException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        this.status = newStatus;
+        this.updatedAt = LocalDateTime.now();
+    }
 
 }
