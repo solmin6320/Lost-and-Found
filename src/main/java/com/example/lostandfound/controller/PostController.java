@@ -2,9 +2,11 @@ package com.example.lostandfound.controller;
 
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
+import com.example.lostandfound.dto.request.PostStatusUpdateRequest;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
+import com.example.lostandfound.dto.response.PostStatusResponse;
 import com.example.lostandfound.security.CustomUserDetails;
 import com.example.lostandfound.service.PostService;
 import jakarta.validation.Valid;
@@ -57,5 +59,18 @@ public class PostController {
         Long memberId = (userDetails == null) ? null : userDetails.getMemberId();
 
         return ResponseEntity.ok(postService.getDetail(id, memberId));
+    }
+
+    // PATCH /api/posts/{id}/status
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<PostStatusResponse> changeStatus(
+            @PathVariable Long id, @Valid @RequestBody PostStatusUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+            ) {
+
+        PostStatusResponse response =
+                postService.changeStatus(id, request.status(), userDetails.getMemberId());
+
+        return ResponseEntity.ok(response);
     }
 }
