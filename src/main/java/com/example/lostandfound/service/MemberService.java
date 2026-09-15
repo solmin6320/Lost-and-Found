@@ -1,12 +1,14 @@
 package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.request.SignupRequest;
+import com.example.lostandfound.dto.response.MemberResponse;
 import com.example.lostandfound.dto.response.SignupResponse;
 import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,5 +48,17 @@ public class MemberService {
 
         // 저장된 엔티티를 응답 DTO로 변환(password는 제외)
         return SignupResponse.from(memberSaved);
+    }
+
+    // 조회 전용
+    @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
+    public MemberResponse getMyInfo(Long memberId) {
+
+        // 이메일, 닉네임을 읽어야 하므로 실제 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        return MemberResponse.from(member);
     }
 }

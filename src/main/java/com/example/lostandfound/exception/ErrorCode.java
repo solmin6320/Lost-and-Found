@@ -6,9 +6,10 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
-    // 회원 예외 처리(409, 401, 423)
+    // 회원 예외 처리(409, 401, 423, 404)
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다"),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다"),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다"),
     ACCOUNT_LOCKED(HttpStatus.LOCKED, "로그인 5회 실패로 계정이 잠겼습니다 30분 후 다시 시도해주세요"),
 
