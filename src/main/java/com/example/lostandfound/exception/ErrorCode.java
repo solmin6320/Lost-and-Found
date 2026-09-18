@@ -6,9 +6,11 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
-    // 회원 예외 처리(409, 401, 423)
+    // 회원 예외 처리(409, 404, 400, 401, 423)
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다"),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다"),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다"),
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다"),
     ACCOUNT_LOCKED(HttpStatus.LOCKED, "로그인 5회 실패로 계정이 잠겼습니다 30분 후 다시 시도해주세요"),
 
@@ -17,7 +19,7 @@ public enum ErrorCode {
     REFRESH_TOKEN_MISMATCH(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 일치하지 않습니다"),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않거나 만료되었습니다"),
 
-    // 게시글, 댓글 예외 처리(404, 403)
+    // 게시글, 댓글 예외 처리(404, 403, 409)
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 게시글입니다"),
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "본인이 작성한 게시글, 댓글만 처리할 수 있습니다"),
     INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "완료된 게시글은 상태를 되돌릴 수 없습니다"),
@@ -25,7 +27,7 @@ public enum ErrorCode {
     // 이미지 예외 처리(400)
     INVALID_IMAGE_EXTENSION(HttpStatus.BAD_REQUEST, "허용되지 않는 이미지 확장자입니다."),
 
-    // 공통 예외 처리(400, 404 ,500)
+    // 공통 예외 처리(400, 404, 405, 500)
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청하신 경로를 찾을 수 없습니다"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청방식입니다"),

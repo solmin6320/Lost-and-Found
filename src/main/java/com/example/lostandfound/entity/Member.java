@@ -48,4 +48,16 @@ public class Member {
         this.nickname = nickname;
         this.createdAt = LocalDateTime.now();
     }
+
+    // 닉네임 변경(중복 검사는 서비스가 담당)
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 비밀번호 변경(인코딩된 값을 받음)
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
