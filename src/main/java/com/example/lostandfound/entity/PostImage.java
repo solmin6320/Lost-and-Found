@@ -31,7 +31,7 @@ public class PostImage {
     @Column(name = "stored_filename", nullable = false, unique = true, length = 50)
     private String storedFilename;
 
-    // S3 객체 URL
+    // S3 객체 키(주소는 응답에서 조립)
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
 
