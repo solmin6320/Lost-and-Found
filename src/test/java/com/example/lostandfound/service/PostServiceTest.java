@@ -217,6 +217,111 @@ public class PostServiceTest {
         verify(memberRepository, never()).findById(anyLong());
     }
 
+    @Test
+    @DisplayName("상세 응답의 이미지 주소는 baseUrl + 객체 키")
+    void getDetail_imageUrl_isBaseUrlPlusKey() {
+
+        Post post = createPost(1L, 1L);
+        post.addImage(PostImage.builder()
+                        .originalFilename("지갑.jpg")
+                        .storedFilename("aaa.jpg")
+                        .filePath("posts/1/aaa.jpg") // DB에는 키만 저장
+                        .fileSize(1024)
+                        .build());
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+                .willReturn(List.of());
+
+        PostDetailResponse response = postService.getDetail(1L, null);
+
+        assertThat(response.images().getFirst().url())
+                .isEqualTo("https://cdn.test/posts/1/aaa.jpg");
+    }
+
+    @Test
+    @DisplayName("이미지를 올라면 게시글 ID로 S3에 업로드")
+    void create_withImages_uploadsWithPostId() {
+
+        Post post = createPost(1L, 1L);
+
+        given(memberRepository.getReferenceById(1L)).willReturn(post.getMember());
+
+        given(postRepository.save(any(Post.class))).willAnswer(i -> {
+            Post saved = i.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 1L); // DB가 채워주는 ID를 흉내
+
+            return saved;
+        });
+
+        given(s3Service.upload(any(MultipartFile.class), eq(1L)))
+                .willReturn("posts/1/aaa.jpg", "posts/1/bbb.png");
+
+        List<MultipartFile> images = List.of(createFile("지갑.jpg"), createFile("뒷면.png"));
+
+        postService.create(createRequest(), 1L, images);
+
+        verify(s3Service, times(2)).upload(any(MultipartFile.class), eq(1L));
+    }
+
+    private PostCreateRequest createRequest() {
+
+        return new PostCreateRequest(
+                PostType.LOST, "지갑 잃어버렸어요", "신흥역 4번 출구 근처입니다",
+                PostCategory.WALLET, "신흥역 4번 출구",
+                LocalDate.of(2026, 9, 14)
+        );
+    }
+
+    @Test
+    @DisplayName("이미지가 5장을 넘으면 업로드 없이 예외 처리")
+    void create_exceedsMaxImageCount_throws() {
+
+        List<MultipartFile> images = List.of(
+                createFile("1.jpg"), createFile("2.jpg"),
+                createFile("3.jpg"), createFile("4.jpg"),
+                createFile("5.jpg"), createFile("6.jpg")
+        );
+
+        assertThatThrownBy(() -> postService.create(createRequest(), 1L, images))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.EXCEEDED_IMAGE_COUNT);
+
+        // 검사가 업로드보다 앞서야 S3에 쓰레기가 남지 않음
+        verify(s3Service, never()).upload(any(MultipartFile.class), anyLong());
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    @DisplayName("빈 파트는 업로드 대상에서 제외")
+    void create_emptyPart_isSkipped() {
+
+        Post post = createPost(1L, 1L);
+
+        given(memberRepository.getReferenceById(1L)).willReturn(post.getMember());
+
+        given(postRepository.save(any(Post.class))).willAnswer(i -> {
+            Post saved = i.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 1L);
+            return saved;
+        });
+        given(s3Service.upload(any(MultipartFile.class), eq(1L)))
+                .willReturn("posts/1/aaa.jpg");
+
+        List<MultipartFile> images = List.of(
+                new MockMultipartFile("images", "", "image/jpeg", new byte[0]), createFile("지갑.jpg"));
+
+        postService.create(createRequest(), 1L, images);
+
+        verify(s3Service, times(1)).upload(any(MultipartFile.class), eq(1L));
+
+    }
+
+    private MultipartFile createFile(String filename) {
+
+        return new MockMultipartFile("images", filename, "images/jpeg", "dummy".getBytes());
+    }
 
 
     private Post createPost(Long postId, Long memberId) {
