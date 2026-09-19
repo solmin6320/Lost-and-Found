@@ -7,15 +7,16 @@ public record PostImageResponse(
 
         Long id,
         String originalFilename,
-        String filePath
+        String url
 ) {
 
-    public static PostImageResponse from(PostImage image) {
+    // DB에는 객체 키만 있으므로 주소를 붙여 내림
+    public static PostImageResponse from(PostImage image, String baseUrl) {
 
         return new PostImageResponse(
                 image.getId(),
                 image.getOriginalFilename(),
-                image.getFilePath()
+                baseUrl + "/" + image.getFilePath()
         );
     }
 }

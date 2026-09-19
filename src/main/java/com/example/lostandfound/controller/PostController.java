@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -30,10 +33,11 @@ public class PostController {
     @PostMapping
     public ResponseEntity<PostResponse> create(
             @Valid @ModelAttribute PostCreateRequest request,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
 
-        PostResponse response = postService.create(request, userDetails.getMemberId());
+        PostResponse response = postService.create(request, userDetails.getMemberId(), images);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response); // 리소스 생성 성공(201)
     }

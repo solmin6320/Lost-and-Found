@@ -13,11 +13,15 @@ import com.example.lostandfound.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.example.lostandfound.config.AwsProperties;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
+
 import static org.mockito.BDDMockito.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 
 import java.time.LocalDate;
@@ -48,8 +53,22 @@ public class PostServiceTest {
     @Mock
     private CommentRepository commentRepository;
 
-    @InjectMocks
+    @Mock
+    private S3Service s3Service;
+
+    // 설정값은 목이 아니라 실제 객체
+    private final AwsProperties awsProperties = new AwsProperties(
+            "ap-northeast-2",
+            new AwsProperties.S3("test-bucket", "https://cdn.test"),
+            new AwsProperties.Credentials("test-key", "test-secret")
+    );
+
     private PostService postService;
+
+    @BeforeEach
+    void setUp() {
+        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, s3Service, awsProperties);
+    }
 
     @Test
     @DisplayName("작성자 본인이면 게시글 상태를 변경")
@@ -191,13 +210,12 @@ public class PostServiceTest {
                 PostCategory.WALLET, "신흥역 4번 출구", LocalDate.of(2026, 9, 14)
         );
 
-        PostResponse response = postService.create(request, 1L);
+        PostResponse response = postService.create(request, 1L, null);
 
         assertThat(response.title()).isEqualTo("지갑 잃어버렸어요");
         assertThat(response.status()).isEqualTo(PostStatus.OPEN);
         verify(memberRepository, never()).findById(anyLong());
     }
-
 
 
 
