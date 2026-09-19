@@ -1,15 +1,13 @@
 package com.example.lostandfound.service;
 
+import com.example.lostandfound.config.AwsProperties;
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
 import com.example.lostandfound.dto.response.PostStatusResponse;
-import com.example.lostandfound.entity.Comment;
-import com.example.lostandfound.entity.Member;
-import com.example.lostandfound.entity.Post;
-import com.example.lostandfound.entity.PostStatus;
+import com.example.lostandfound.entity.*;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.CommentRepository;
@@ -22,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -33,14 +32,25 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final PostViewService postViewService;
     private final CommentRepository commentRepository;
+    private final S3Service s3Service;
+    private final AwsProperties awsProperties;
 
     // 상세 화면에 먼저 보여줄 댓글 수
     private static final int COMMENT_PREVIEW_SIZE = 20;
+    // DB 제약으로 인해 유일한 검사
+    private static final int MAX_IMAGE_COUNT = 5;
 
     // 경로 규칙이 바뀌어도 스스로를 지키도록 선언
     @PreAuthorize("isAuthenticated()")
     @Transactional
-    public PostResponse create(PostCreateRequest request, Long memberId) {
+    public PostResponse create(PostCreateRequest request, Long memberId, List<MultipartFile> images) {
+
+        List<MultipartFile> uploadTarget = filterEmpty(images);
+
+        // 업로드 전에 검사
+        if (uploadTarget.size() > MAX_IMAGE_COUNT) {
+            throw new CustomException(ErrorCode.EXCEEDED_IMAGE_COUNT);
+        }
 
         // FK 값만 필요하므로 프록시만 가져옴
         Member member = memberRepository.getReferenceById(memberId);
@@ -56,7 +66,12 @@ public class PostService {
                 .lostFoundDate(request.lostFoundDate())
                 .build();
 
+        // 객체 키에 postId가 들어가므로 먼저 저장
         Post postSaved = postRepository.save(post);
+
+        for (MultipartFile file : uploadTarget) {
+            postSaved.addImage(toPostImage(file, postSaved.getId()));
+        }
 
         return PostResponse.from(postSaved);
     }
@@ -91,7 +106,7 @@ public class PostService {
         long totalCommentCount = (comments.size() < COMMENT_PREVIEW_SIZE) ? comments.size() : commentRepository.countByPostId(postId);
 
 
-        return PostDetailResponse.from(post, comments, totalCommentCount);
+        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl());
     }
 
     // 소유자 검증이 필요하므로 처리
@@ -113,4 +128,31 @@ public class PostService {
 
         return PostStatusResponse.from(post);
     }
+
+    // 파일을 고르지 않아도 빈 파트가 오므로 걸러냄
+    private List<MultipartFile> filterEmpty(List<MultipartFile> images) {
+
+        if (images == null) {
+            return List.of();
+        }
+
+        return images.stream()
+                .filter(file -> !file.isEmpty())
+                .toList();
+    }
+
+    // S3에 올린 뒤 DB에 남길 메타데이터로 변환
+    private PostImage toPostImage(MultipartFile file, Long postId) {
+
+        String key = s3Service.upload(file, postId);
+
+        return PostImage.builder()
+                .originalFilename(file.getOriginalFilename())
+                .storedFilename(key.substring(key.lastIndexOf("/") + 1)) // 키의 마지막 조각
+                .filePath(key) // 주소는 응답에서 조립
+                .fileSize((int) file.getSize())
+                .build();
+    }
+
+
 }

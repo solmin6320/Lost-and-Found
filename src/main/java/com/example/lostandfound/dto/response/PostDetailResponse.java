@@ -29,7 +29,7 @@ public record PostDetailResponse(
         long totalCommentCount
 ) {
 
-    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount) {
+    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount, String imageBaseUrl) {
 
         return new PostDetailResponse(
                 post.getId(),
@@ -46,7 +46,7 @@ public record PostDetailResponse(
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
                 post.getImages().stream() // fetch join으로 이미 로딩됨
-                        .map(PostImageResponse::from)
+                        .map(image -> PostImageResponse.from(image, imageBaseUrl))
                         .toList(),
                 comments.stream()
                         .map(CommentResponse::from)

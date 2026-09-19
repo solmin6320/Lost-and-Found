@@ -41,3 +41,9 @@ jwt:
 cloud:
   aws:
     region: ap-northeast-2   # 로컬, 운영 동일하므로 기본 파일에 둠
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+      base-url: ${AWS_S3_BASE_URL}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
