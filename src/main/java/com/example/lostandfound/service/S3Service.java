@@ -6,6 +6,8 @@ import com.example.lostandfound.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -64,6 +66,27 @@ public class S3Service {
             log.error("S3 객체 삭제 실패: {}", key, e);
         }
     }
+
+    // 삭제는 커밋된 뒤로 미룸
+    public void deleteAfterCommit(List<String> keys) {
+
+        if (keys.isEmpty()) {
+            return;
+        }
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            keys.forEach(this::delete);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                keys.forEach(S3Service.this::delete);
+            }
+        });
+    }
+
 
 
     // 원본 파일명은 쓰지 않고 확장자만 뽑아 검증
