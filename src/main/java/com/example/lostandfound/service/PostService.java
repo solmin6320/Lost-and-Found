@@ -3,6 +3,7 @@ package com.example.lostandfound.service;
 import com.example.lostandfound.config.AwsProperties;
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
+import com.example.lostandfound.dto.request.PostUpdateRequest;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
@@ -129,6 +130,51 @@ public class PostService {
         return PostStatusResponse.from(post);
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public PostResponse update(Long postId, PostUpdateRequest request, List<MultipartFile> images, Long memberId) {
+
+        // 교체 대상 이미지까지 함께 조회
+        Post post = postRepository.findDetailById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        post.update(request.postType(), request.title(), request.content(), request.postCategory(), request.location(), request.lostFoundDate());
+
+        replaceImages(post, filterEmpty(images), request.removeImages());
+
+
+        return PostResponse.from(post);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public void delete(Long postId, Long memberId) {
+
+        Post post = postRepository.findDetailById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 삭제 전에 키를 확보
+        List<String> keys = post.getImages().stream()
+                .map(PostImage::getFilePath)
+                .toList();
+
+        // 댓글을 먼저 지움
+        commentRepository.deleteByPostId(postId);
+        postRepository.delete(post);
+
+        s3Service.deleteAfterCommit(keys);
+    }
+
+
+
     // 파일을 고르지 않아도 빈 파트가 오므로 걸러냄
     private List<MultipartFile> filterEmpty(List<MultipartFile> images) {
 
@@ -154,5 +200,30 @@ public class PostService {
                 .build();
     }
 
+    // 명시적 의사표시가 있을 때만 지움
+    private void replaceImages(Post post, List<MultipartFile> uploadTargets, boolean removeImages) {
+
+        // 빈 파트만 왔고 삭제 의사도 없으면 그대로 둠
+        if (uploadTargets.isEmpty() && !removeImages) {
+            return;
+        }
+
+        if (uploadTargets.size() > MAX_IMAGE_COUNT) {
+            throw new CustomException(ErrorCode.EXCEEDED_IMAGE_COUNT);
+        }
+        
+        // 비우기 전에 키를 확복
+        List<String> oldKeys = post.getImages().stream()
+                .map(PostImage::getFilePath)
+                .toList();
+
+        post.clearImages();
+
+        for (MultipartFile file : uploadTargets) {
+            post.addImage(toPostImage(file, post.getId()));
+        }
+
+        s3Service.deleteAfterCommit(oldKeys);
+    }
 
 }
