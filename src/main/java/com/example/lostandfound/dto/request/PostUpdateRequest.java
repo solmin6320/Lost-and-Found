@@ -14,7 +14,7 @@ import java.time.LocalDate;
 public record PostUpdateRequest(
 
         @NotNull(message = "유형은 필수입니다")
-        PostType Type,
+        PostType type,
 
         @NotBlank(message = "제목은 필수입니다")
         @Size(max = 100, message = "제목은 100자를 초과할 수 없습니다")
@@ -25,7 +25,7 @@ public record PostUpdateRequest(
         String content,
 
         @NotNull(message = "카테고리는 필수입니다")
-        PostCategory Category,
+        PostCategory category,
 
         @NotBlank(message = "장소는 필수입니다")
         @Size(max = 100, message = "장소는 100자를 초과할 수 없습니다")
