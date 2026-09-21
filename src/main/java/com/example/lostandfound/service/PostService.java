@@ -142,7 +142,7 @@ public class PostService {
             throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
-        post.update(request.postType(), request.title(), request.content(), request.postCategory(), request.location(), request.lostFoundDate());
+        post.update(request.Type(), request.title(), request.content(), request.Category(), request.location(), request.lostFoundDate());
 
         replaceImages(post, filterEmpty(images), request.removeImages());
 
