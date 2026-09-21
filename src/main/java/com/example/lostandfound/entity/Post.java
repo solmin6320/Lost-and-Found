@@ -118,4 +118,21 @@ public class Post {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // 수정 가능한 필드만 변경
+    public void update(PostType type, String title, String content, PostCategory category, String location, LocalDate lostFoundDate) {
+
+        this.type = type;
+        this.title = title;
+        this.content = content;
+        this.category = category;
+        this.location = location;
+        this.lostFoundDate = lostFoundDate;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 비우기만 함
+    public void clearImages() {
+        this.images.clear();
+    }
+
 }
