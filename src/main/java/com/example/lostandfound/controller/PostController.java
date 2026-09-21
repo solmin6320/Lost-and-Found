@@ -3,6 +3,7 @@ package com.example.lostandfound.controller;
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.request.PostStatusUpdateRequest;
+import com.example.lostandfound.dto.request.PostUpdateRequest;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
@@ -64,6 +65,33 @@ public class PostController {
 
         return ResponseEntity.ok(postService.getDetail(id, memberId));
     }
+
+    // PUT /api/posts/{id}
+    @PutMapping("/{id}")
+    public ResponseEntity<PostResponse> update(
+            @PathVariable Long id,
+            @Valid @ModelAttribute PostUpdateRequest request,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+                PostResponse response = postService.update(id, request, images, userDetails.getMemberId());
+
+                return ResponseEntity.ok(response);
+    }
+
+    // DELETE /api/posts/{id}
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+
+        postService.delete(id, userDetails.getMemberId());
+
+        return ResponseEntity.noContent().build(); // 204 예외
+    }
+
+
 
     // PATCH /api/posts/{id}/status
     @PatchMapping("/{id}/status")
