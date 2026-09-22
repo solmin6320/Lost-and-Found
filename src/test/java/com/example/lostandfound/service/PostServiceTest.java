@@ -323,7 +323,7 @@ public class PostServiceTest {
     @DisplayName("이미지를 안 보내면 기존 이미지를 건드리지 않음")
     void update_noImages_keepExistingImages() {
 
-        Post post = createPost(1L, 1L);
+        Post post = createPostWithImage(1L, 1L);
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
 
@@ -376,7 +376,7 @@ public class PostServiceTest {
     @DisplayName("removeImages가 true면 업로드 없이 전부 삭제")
     void update_removeImages_deletesAll() {
 
-        Post post = createPost(1L, 1L);
+        Post post = createPostWithImage(1L, 1L);
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
 
         postService.update(1L, createUpdateRequest(true), null, 1L);
