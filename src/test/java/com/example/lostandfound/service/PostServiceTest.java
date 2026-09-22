@@ -1,6 +1,7 @@
 package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.request.PostCreateRequest;
+import com.example.lostandfound.dto.request.PostUpdateRequest;
 import com.example.lostandfound.dto.response.PostDetailResponse;
 import com.example.lostandfound.dto.response.PostResponse;
 import com.example.lostandfound.dto.response.PostStatusResponse;
@@ -13,6 +14,7 @@ import com.example.lostandfound.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
@@ -28,9 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.*;
 
 
 import java.time.LocalDate;
@@ -318,6 +318,177 @@ public class PostServiceTest {
 
     }
 
+    @Test
+    @DisplayName("이미지를 안 보내면 기존 이미지를 건드리지 않음")
+    void update_noImages_keepExistingImages() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        postService.update(1L, createUpdateRequest(false), null, 1L);
+
+        assertThat(post.getImages()).hasSize(1);
+        verify(s3Service, never()).deleteAfterCommit(any());
+        verify(s3Service, never()).upload(any(MultipartFile.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("빈 파트만 와도 기존 이미지를 건드리지 않음")
+    void update_emptyPartOnly_keepsExistingImages() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        List<MultipartFile> images = List.of(
+                new MockMultipartFile("images", "", "images/jpeg", new byte[0]));
+
+        postService.update(1L, createUpdateRequest(false), images, 1L);
+        
+        // 빈 파트를 삭제 신호로 읽으면 여기서 이미지가 사라짐
+        assertThat(post.getImages()).hasSize(1);
+        verify(s3Service, never()).deleteAfterCommit(any());
+    }
+
+    @Test
+    @DisplayName("이미지를 보내면 교체하고 옛 객체 키는 커밋 후 삭제로 넘김")
+    void update_withImages_replaceAndDeletesOldKeys() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(s3Service.upload(any(MultipartFile.class), eq(1L)))
+                .willReturn("posts/1/new.jpg");
+
+        postService.update(1L, createUpdateRequest(false),
+                List.of(createFile("새 사진.jpg")), 1L);
+
+        assertThat(post.getImages()).hasSize(1);
+
+        assertThat(post.getImages().getFirst().getFilePath()).isEqualTo("posts/1/new.jpg");
+
+        verify(s3Service).deleteAfterCommit(List.of("posts/1/old.jpg"));
+    }
+
+    @Test
+    @DisplayName("removeImages가 true면 업로드 없이 전부 삭제")
+    void update_removeImages_deletesAll() {
+
+        Post post = createPostWithImage(1L, 1L);
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        postService.update(1L, createUpdateRequest(true), null, 1L);
+
+        assertThat(post.getImages()).isEmpty();
+        verify(s3Service).deleteAfterCommit(List.of("posts/1/old.jpg"));
+        verify(s3Service, never()).upload(any(MultipartFile.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("수정 시 5장을 넘으면 기존 이미지를 건드리지 않고 예외")
+    void update_exceedsMaxImageCount_throws() {
+
+        Post post = createPostWithImage(1L,1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        List<MultipartFile> images = List.of(
+                createFile("1.jpg"), createFile("2.jpg"), createFile("3.jpg"),
+                createFile("4.jpg"), createFile("5.jpg"), createFile("6.jpg")
+        );
+
+        assertThatThrownBy(() -> postService.update(1L, createUpdateRequest(false), images, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.EXCEEDED_IMAGE_COUNT);
+
+        // 개수 검사가 우선이여야 함
+        assertThat(post.getImages()).hasSize(1);
+        verify(s3Service, never()).upload(any(MultipartFile.class), anyLong());
+        verify(s3Service, never()).deleteAfterCommit(any());
+    }
+
+    @Test
+    @DisplayName("작성자가 아니면 수정 시 403 예외")
+    void update_notOwner_throws() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        assertThatThrownBy(() -> postService.update(1L, createUpdateRequest(true), null, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.FORBIDDEN_ACCESS);
+
+        // 권한 검사가 먼저
+        assertThat(post.getImages()).hasSize(1);
+        verify(s3Service, never()).deleteAfterCommit(any());
+    }
+
+    @Test
+    @DisplayName("없는 게시글을 수정하면 404 예외")
+    void update_postNotFound_throws() {
+
+        given(postRepository.findDetailById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> postService.update(999L, createUpdateRequest(false), null, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.POST_NOT_FOUND);
+    }
+
+
+    @Test
+    @DisplayName("삭제 시 댓글을 게시글보다 먼저 지움")
+    void delete_removesCommentsBeforePost() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        postService.delete(1L, 1L);
+
+        // 순서가 뒤바뀌면 FK 제약 위반으로 500 예외
+        InOrder inOrder = inOrder(commentRepository, postRepository);
+        inOrder.verify(commentRepository).deleteByPostId(1L);
+        inOrder.verify(postRepository).delete(post);
+
+        verify(s3Service).deleteAfterCommit(List.of("posts/1/old.jpg"));
+    }
+
+    @Test
+    @DisplayName("작성자가 아니면 삭제 시 403 예외")
+    void delete_notOwner_throws() {
+
+        Post post =createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        assertThatThrownBy(() -> postService.delete(1L, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.FORBIDDEN_ACCESS);
+
+        verify(commentRepository, never()).deleteByPostId(anyLong());
+        verify(postRepository, never()).delete(any(Post.class));
+        verify(s3Service, never()).deleteAfterCommit(any());
+    }
+
+    @Test
+    @DisplayName("없는 게시글을 삭제하면 404 예외")
+    void delete_postNotFound_throws() {
+
+        given(postRepository.findDetailById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> postService.delete(999L, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.POST_NOT_FOUND);
+    }
+
+
     private MultipartFile createFile(String filename) {
 
         return new MockMultipartFile("images", filename, "images/jpeg", "dummy".getBytes());
@@ -357,4 +528,26 @@ public class PostServiceTest {
                 .content("혹시 검은색 반지갑인가요?")
                 .build();
     }
+
+   private Post createPostWithImage(Long postId, Long memberId) {
+
+        Post post= createPost(postId, memberId);
+        post.addImage(PostImage.builder()
+                        .originalFilename("지갑.jpg")
+                        .storedFilename("old.jpg")
+                        .filePath("posts/1/old.jpg")
+                        .fileSize(1024)
+                .build());
+
+        return post;
+   }
+
+   private PostUpdateRequest createUpdateRequest(boolean removeImages) {
+
+        return new PostUpdateRequest(
+                PostType.LOST, "제목을 고쳤습니다", "본문도 고쳤습니다",
+                PostCategory.WALLET, "신흥역 4번 출구",
+                LocalDate.of(2026, 9, 14), removeImages
+        );
+   }
 }
