@@ -14,6 +14,7 @@ import com.example.lostandfound.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
@@ -29,9 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.*;
 
 
 import java.time.LocalDate;
@@ -411,7 +410,7 @@ public class PostServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 아니면 수정 시 예외")
+    @DisplayName("작성자가 아니면 수정 시 403 예외")
     void update_notOwner_throws() {
 
         Post post = createPostWithImage(1L, 1L);
@@ -429,7 +428,7 @@ public class PostServiceTest {
     }
 
     @Test
-    @DisplayName("없는 게시글을 수정하면 예외")
+    @DisplayName("없는 게시글을 수정하면 404 예외")
     void update_postNotFound_throws() {
 
         given(postRepository.findDetailById(999L)).willReturn(Optional.empty());
@@ -441,6 +440,53 @@ public class PostServiceTest {
     }
 
 
+    @Test
+    @DisplayName("삭제 시 댓글을 게시글보다 먼저 지움")
+    void delete_removesCommentsBeforePost() {
+
+        Post post = createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        postService.delete(1L, 1L);
+
+        // 순서가 뒤바뀌면 FK 제약 위반으로 500 예외
+        InOrder inOrder = inOrder(commentRepository, postRepository);
+        inOrder.verify(commentRepository).deleteByPostId(1L);
+        inOrder.verify(postRepository).delete(post);
+
+        verify(s3Service).deleteAfterCommit(List.of("posts/1/old.jpg"));
+    }
+
+    @Test
+    @DisplayName("작성자가 아니면 삭제 시 403 예외")
+    void delete_notOwner_throws() {
+
+        Post post =createPostWithImage(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+
+        assertThatThrownBy(() -> postService.delete(1L, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.FORBIDDEN_ACCESS);
+
+        verify(commentRepository, never()).deleteByPostId(anyLong());
+        verify(postRepository, never()).delete(any(Post.class));
+        verify(s3Service, never()).deleteAfterCommit(any());
+    }
+
+    @Test
+    @DisplayName("없는 게시글을 삭제하면 404 예외")
+    void delete_postNotFound_throws() {
+
+        given(postRepository.findDetailById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> postService.delete(999L, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.POST_NOT_FOUND);
+    }
 
 
     private MultipartFile createFile(String filename) {
