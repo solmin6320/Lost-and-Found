@@ -3,6 +3,7 @@ package com.example.lostandfound.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -83,6 +84,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 405
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 깨진 JSON, 본문 누락, JSON 안의 Enum 불일치에 대한 예외 처리
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException() {
+
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 400
                 .body(ErrorResponse.of(errorCode));
     }
 
