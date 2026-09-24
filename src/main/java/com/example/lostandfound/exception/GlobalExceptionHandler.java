@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst() // 첫 번째 에러만 응답에 담음
-                .map(fieldError -> fieldError.getDefaultMessage()) // DTO에 적어둔 메세지 값을 그대로 사용
+                .map(fieldError -> fieldError.isBindingFailure() ? ErrorCode.INVALID_INPUT.getMessage() : fieldError.getDefaultMessage()) // 타입 변환 실패는 내부 클래스명이 섞여 있어 감춤
                 .orElse(ErrorCode.INVALID_INPUT.getMessage()); // 못 찾을 경우의 기본 메시지
 
         return ResponseEntity
