@@ -10,7 +10,8 @@ public record CommentResponse(
         Long memberId,
         String nickname,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 
     public static CommentResponse from(Comment comment) {
@@ -19,7 +20,8 @@ public record CommentResponse(
                 comment.getMember().getId(),
                 comment.getMember().getNickname(), // @EntityGraph로 이미 로딩
                 comment.getContent(),
-                comment.getCreatedAt()
+                comment.getCreatedAt(),
+                comment.getUpdatedAt()
         );
     }
 }

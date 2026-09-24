@@ -3,6 +3,7 @@ package com.example.lostandfound.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -33,7 +34,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst() // 첫 번째 에러만 응답에 담음
-                .map(fieldError -> fieldError.getDefaultMessage()) // DTO에 적어둔 메세지 값을 그대로 사용
+                .map(fieldError -> fieldError.isBindingFailure() ? ErrorCode.INVALID_INPUT.getMessage() : fieldError.getDefaultMessage()) // 타입 변환 실패는 내부 클래스명이 섞여 있어 감춤
                 .orElse(ErrorCode.INVALID_INPUT.getMessage()); // 못 찾을 경우의 기본 메시지
 
         return ResponseEntity
@@ -83,6 +84,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 405
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 깨진 JSON, 본문 누락, JSON 안의 Enum 불일치에 대한 예외 처리
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException() {
+
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 400
                 .body(ErrorResponse.of(errorCode));
     }
 

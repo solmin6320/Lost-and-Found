@@ -37,7 +37,8 @@ public class Comment {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // updatedAt은 추후 추가할 예정(V2 적용 후)
+    // 변경 후 - 수정 전에는 null
+    private LocalDateTime updatedAt;
 
     @Builder
     private Comment(Post post, Member member, String content) {
@@ -45,5 +46,11 @@ public class Comment {
         this.member = member;
         this.content = content;
         this.createdAt = LocalDateTime.now();
+    }
+
+    // 내용 수정(검증은 서비스 담당)
+    public void update(String content) {
+        this.content = content;
+        this.updatedAt = LocalDateTime.now();
     }
 }
