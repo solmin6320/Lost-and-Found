@@ -13,6 +13,7 @@ import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.CommentRepository;
 import com.example.lostandfound.repository.MemberRepository;
+import com.example.lostandfound.repository.PostImageRepository;
 import com.example.lostandfound.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,7 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final PostViewService postViewService;
     private final CommentRepository commentRepository;
+    private final PostImageRepository postImageRepository;
     private final S3Service s3Service;
     private final AwsProperties awsProperties;
 
