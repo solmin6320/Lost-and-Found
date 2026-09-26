@@ -15,7 +15,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     // // 작성자 닉네임 때문에 N+1이 나므로 함께 조회
     @EntityGraph(attributePaths = "member")
-    List<Comment> findByPostIdOrderByCreatedAtAsc(Long postId, Pageable pageable);
+    List<Comment> findByPostIdOrderByCreatedAtAscIdAsc(Long postId, Pageable pageable);
 
 
     // 목록 더보기용
