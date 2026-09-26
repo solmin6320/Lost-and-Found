@@ -13,6 +13,7 @@ import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.CommentRepository;
 import com.example.lostandfound.repository.MemberRepository;
+import com.example.lostandfound.repository.PostImageRepository;
 import com.example.lostandfound.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final PostViewService postViewService;
     private final CommentRepository commentRepository;
+    private final PostImageRepository postImageRepository;
     private final S3Service s3Service;
     private final AwsProperties awsProperties;
 
@@ -81,8 +85,11 @@ public class PostService {
     @Transactional(readOnly = true)
     public Page<PostListResponse> search(PostSearchCondition condition, Pageable pageable) {
 
-        return postRepository.search(condition, pageable)
-                .map(PostListResponse::from);
+        Page<Post> posts = postRepository.search(condition, pageable);
+        Map<Long, String> thumbnails = findThumbnailUrls(posts.getContent());
+
+        return posts.map(post -> PostListResponse.from(post, thumbnails.get(post.getId())));
+
     }
 
     // 조회수 증가가 섞이므로 readOnly를 쓰지 않음
@@ -224,6 +231,23 @@ public class PostService {
         }
 
         s3Service.deleteAfterCommit(oldKeys);
+    }
+
+    // 목록이 비면 썸네일 쿼리를 건너뜀
+    private Map<Long, String> findThumbnailUrls(List<Post> posts) {
+
+        if (posts.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> postIds = posts.stream().map(Post::getId).toList();
+        String baseUrl = awsProperties.s3().baseUrl();
+
+        return postImageRepository.findThumbnails(postIds).stream()
+                .collect(Collectors.toMap(
+                        PostImageRepository.ThumbnailView::getPostId,
+                        view -> baseUrl + "/" + view.getFilePath()
+                ));
     }
 
 }
