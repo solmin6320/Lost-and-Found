@@ -20,7 +20,7 @@ where post_id IN (:postIds)
 Group By post_id
 )
 """, nativeQuery = true) // 네이티브 쿼리 사용
-    List<ThumbnailView> findThumbnails(@Param("postIds")Collection<Long> postIds);
+    List<ThumbnailView> findThumbnails(@Param("postIds") Collection<Long> postIds);
 
     interface ThumbnailView {
         Long getPostId();

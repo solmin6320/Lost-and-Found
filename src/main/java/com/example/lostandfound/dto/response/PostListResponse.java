@@ -20,10 +20,11 @@ public record PostListResponse(
         LocalDate lostFoundDate,
         PostStatus status,
         int viewCount,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String thumbnailUrl // 이미지가 없으면 null
 ) {
 
-    public static PostListResponse from(Post post) {
+    public static PostListResponse from(Post post, String thumbnailUrl) {
 
         return new PostListResponse(
                 post.getId(),
@@ -36,7 +37,8 @@ public record PostListResponse(
                 post.getLostFoundDate(),
                 post.getStatus(),
                 post.getViewCount(),
-                post.getCreatedAt()
+                post.getCreatedAt(),
+                thumbnailUrl
         );
     }
 }
