@@ -106,7 +106,8 @@ public class PostService {
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
         // 이미지와 따로 조회
-        List<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAsc(
+        List<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+
                 postId, PageRequest.of(0, COMMENT_PREVIEW_SIZE)
         );
 

@@ -128,7 +128,8 @@ public class PostServiceTest {
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
 
-        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+eq(1L), any(Pageable.class)))
                 .willReturn(List.of());
 
         postService.getDetail(1L, null);
@@ -145,7 +146,8 @@ public class PostServiceTest {
         given(postViewService.isFirstView(1L, 5L)).willReturn(true);
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
-        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+eq(1L), any(Pageable.class)))
                 .willReturn(List.of());
 
         postService.getDetail(1L, 5L);
@@ -161,7 +163,8 @@ public class PostServiceTest {
         given(postViewService.isFirstView(1L, 5L)).willReturn(false);
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
-        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+eq(1L), any(Pageable.class)))
                 .willReturn(List.of());
 
         postService.getDetail(1L, 5L);
@@ -177,7 +180,8 @@ public class PostServiceTest {
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
 
-        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+eq(1L), any(Pageable.class)))
                 .willReturn(List.of(createComment(post),
                         createComment(post)));
 
@@ -234,7 +238,8 @@ public class PostServiceTest {
                         .build());
 
         given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
-        given(commentRepository.findByPostIdOrderByCreatedAtAsc(eq(1L), any(Pageable.class)))
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+eq(1L), any(Pageable.class)))
                 .willReturn(List.of());
 
         PostDetailResponse response = postService.getDetail(1L, null);
