@@ -1,8 +1,10 @@
 package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.request.PostCreateRequest;
+import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.request.PostUpdateRequest;
 import com.example.lostandfound.dto.response.PostDetailResponse;
+import com.example.lostandfound.dto.response.PostListResponse;
 import com.example.lostandfound.dto.response.PostResponse;
 import com.example.lostandfound.dto.response.PostStatusResponse;
 import com.example.lostandfound.entity.*;
@@ -18,6 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.example.lostandfound.config.AwsProperties;
@@ -32,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.tuple;
 
 
 import java.time.LocalDate;
@@ -497,6 +503,45 @@ eq(1L), any(Pageable.class)))
                 .isEqualTo(ErrorCode.POST_NOT_FOUND);
     }
 
+    @Test
+    @DisplayName("목록 조회 시 이미지 있는 글은 대표 이미지 주소, 없는 글은 null")
+    void search_thumbnailUrl() {
+        PostSearchCondition condition = new PostSearchCondition(null, null, null, null, null, null, null);
+        Pageable pageable = PageRequest.of(0, 20);
+
+        given(postRepository.search(condition, pageable))
+                .willReturn(new PageImpl<>(List.of(createPost(1L, 1L),
+                        createPost(2L, 1L)), pageable, 2));
+
+        given(postImageRepository.findThumbnails(List.of(1L, 2L)))
+                .willReturn(List.of(thumbnail(1L, "posts/1/first.jpg")));
+
+        Page<PostListResponse> result = postService.search(condition, pageable);
+
+        assertThat(result.getContent())
+                .extracting(PostListResponse::id, PostListResponse::thumbnailUrl)
+                .containsExactly(
+                        tuple(1L, "https://cdn.test/posts/1/first.jpg"),
+                        tuple(2L, null)
+                );
+    }
+
+
+    @Test
+    @DisplayName("목록이 비면 썸네일 쿼리를 보내지 않음")
+    void search_emptySkipsThumbnailQuery() {
+
+        PostSearchCondition condition = new PostSearchCondition(null, null, null, null, null, null, null);
+
+        Pageable pageable = PageRequest.of(0, 20);
+
+        given(postRepository.search(condition, pageable)).willReturn(Page.empty(pageable));
+
+        postService.search(condition, pageable);
+
+        verify(postImageRepository, never()).findThumbnails(any());
+    }
+
 
     private MultipartFile createFile(String filename) {
 
@@ -558,5 +603,20 @@ eq(1L), any(Pageable.class)))
                 PostCategory.WALLET, "신흥역 4번 출구",
                 LocalDate.of(2026, 9, 14), removeImages
         );
+
    }
+    private PostImageRepository.ThumbnailView thumbnail(Long postId, String filePath) {
+
+        return new PostImageRepository.ThumbnailView() {
+            @Override
+            public Long getPostId() {
+                return postId;
+            }
+
+            @Override
+            public String getFilePath() {
+                return filePath;
+            }
+        };
+    }
 }
