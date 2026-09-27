@@ -181,6 +181,19 @@ public class PostService {
         s3Service.deleteAfterCommit(keys);
     }
 
+    // 마이 페이지
+    // 본인 글만, 정렬은 서버가 고정
+    @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> getMyPosts(Long memberId, PostStatus status, Pageable pageable) {
+
+        Page<Post> posts = postRepository.findMyPosts(memberId, status, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+
+        Map<Long, String> thumbnails = findThumbnailUrls(posts.getContent());
+
+        return posts.map(post -> PostListResponse.from(post, thumbnails.get(post.getId())));
+    }
+
 
 
     // 파일을 고르지 않아도 빈 파트가 오므로 걸러냄
