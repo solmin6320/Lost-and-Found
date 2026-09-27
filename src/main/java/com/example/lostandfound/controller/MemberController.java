@@ -3,10 +3,15 @@ package com.example.lostandfound.controller;
 import com.example.lostandfound.dto.request.NicknameUpdateRequest;
 import com.example.lostandfound.dto.request.PasswordUpdateRequest;
 import com.example.lostandfound.dto.response.MemberResponse;
+import com.example.lostandfound.dto.response.PostListResponse;
+import com.example.lostandfound.entity.PostStatus;
 import com.example.lostandfound.security.CustomUserDetails;
 import com.example.lostandfound.service.MemberService;
+import com.example.lostandfound.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberService memberService;
+    private final PostService postService;
 
     // GET /api/members/me
     // 인증이 보장된 경로이므로 null 체크 불필요
@@ -49,5 +55,16 @@ public class MemberController {
         memberService.updatePassword(userDetails.getMemberId(), request);
 
         return ResponseEntity.noContent().build();
+    }
+
+    // GET / api/members/me/posts?status=&page=&size=
+    // status를 안 보내면 전체
+    @GetMapping("/me/posts")
+    public ResponseEntity<Page<PostListResponse>> getMyPosts(
+            @RequestParam(required = false)PostStatus status, Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+            ) {
+
+        return ResponseEntity.ok(postService.getMyPosts(userDetails.getMemberId(), status, pageable));
     }
 }
