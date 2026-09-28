@@ -47,3 +47,13 @@ cloud:
     credentials:
       access-key: ${AWS_ACCESS_KEY}
       secret-key: ${AWS_SECRET_KEY}
+
+# 헬스체크 - health만 웹에 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never # DB - Redis 상태 상세는 밖에 보이지 않게

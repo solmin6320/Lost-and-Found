@@ -74,6 +74,9 @@ public class SecurityConfig {
                         // 게시글 조회는 비로그인도 열람 가능
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
 
+                        // ALB 헬스체크
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
