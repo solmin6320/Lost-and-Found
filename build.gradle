@@ -61,6 +61,10 @@ dependencies {
     // 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+
+    // 헬스체크(ALB 타겟그룹)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
 }
 
 
