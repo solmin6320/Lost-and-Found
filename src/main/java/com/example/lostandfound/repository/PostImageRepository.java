@@ -15,7 +15,7 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 Select pi.post_id as postId, pi.file_path as filePath
 From post_image pi
 where pi.image_id IN (
-Selct MIN(image_id) from post_image
+select MIN(image_id) from post_image
 where post_id IN (:postIds)
 Group By post_id
 )
