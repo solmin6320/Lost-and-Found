@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 18 * * 0'   # 매주 일요일 03:00
+    - cron: '0 18 * * 0'   # 매주 월요일 03:00
 
 jobs:
   analyze:
