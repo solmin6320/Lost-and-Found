@@ -17,13 +17,11 @@ import com.example.lostandfound.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.example.lostandfound.config.AwsProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -539,6 +537,41 @@ eq(1L), any(Pageable.class)))
 
         postService.search(condition, pageable);
 
+        verify(postImageRepository, never()).findThumbnails(any());
+    }
+
+    @Test
+    @DisplayName("마이페이지는 클라이언트 정렬을 버리고 본인 글을 조회")
+    void getMyPosts_dropClientSort() {
+
+        Pageable requested = PageRequest.of(1, 10, Sort.by("title"));
+        given(postRepository.findMyPosts(eq(1L), eq(PostStatus.OPEN), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(createPost(3L, 1L)), PageRequest.of(1, 10), 11));
+
+        given(postImageRepository.findThumbnails(List.of(3L))).willReturn(List.of());
+
+        postService.getMyPosts(1L, PostStatus.OPEN, requested);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+
+        verify(postRepository).findMyPosts(eq(1L), eq(PostStatus.OPEN), captor.capture());
+
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(10);
+        assertThat(captor.getValue().getSort().isUnsorted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("마이페이지에서 status를 생략하면 null로 전체 조회")
+    void getMyPosts_allWhenStatusNull() {
+
+        Pageable pageable = PageRequest.of(0, 20);
+        given(postRepository.findMyPosts(eq(1L), isNull(), any(Pageable.class)))
+                .willReturn(Page.empty(pageable));
+
+        postService.getMyPosts(1L, null, pageable);
+
+        verify(postRepository).findMyPosts(eq(1L), isNull(), any(Pageable.class));
         verify(postImageRepository, never()).findThumbnails(any());
     }
 
