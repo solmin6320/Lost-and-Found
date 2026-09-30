@@ -174,6 +174,28 @@ class PostIntegrationTest extends IntegrationTestSupport {
     }
 
 
+    @Test
+    @DisplayName("수정 때 새 사진을 올리면 기존 사진이 모두 교체되고 옛 사진은 커밋 뒤 S3에서 지워짐")
+    void updateReplacesImages() throws Exception {
+        Long postId = createPost(owner, image("a.jpg"), image("b.jpg"));
+        List<String> oldKeys = jdbcTemplate.queryForList(
+                "SELECT file_path FROM post_image WHERE post_id = ?", String.class, postId);
+
+        MockMultipartHttpServletRequestBuilder request = multipart(HttpMethod.PUT, "/api/posts/{id}", postId);
+        request.file(image("c.jpg"));
+
+        mockMvc.perform(postForm(request).header(AUTHORIZATION, owner))
+                .andExpect(status().isOk());
+
+        List<String> newKeys = jdbcTemplate.queryForList(
+                "SELECT file_path FROM post_image WHERE post_id = ?", String.class, postId);
+
+        assertThat(newKeys).hasSize(1).doesNotContainAnyElementsOf(oldKeys);
+        verify(s3Client, times(3)).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        verify(s3Client, times(2)).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+
 
     private Long createPost(String token, MockMultipartFile... images) throws Exception {
         MockMultipartHttpServletRequestBuilder request = multipart("/api/posts");

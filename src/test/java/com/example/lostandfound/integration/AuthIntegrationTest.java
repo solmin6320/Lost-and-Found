@@ -11,8 +11,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -104,5 +103,27 @@ class AuthIntegrationTest extends IntegrationTestSupport {
                         .content(json(Map.of("email", EMAIL, "password", PASSWORD, "nickname", "다른닉네임"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"));
+    }
+
+
+    @Test
+    @DisplayName("비밀번호를 바꾸면 기존 리프레시 토큰을 폐기하고 새 비밀번호로만 로그인됨")
+    void passwordChangeRevokesSessions() throws Exception {
+        signup(EMAIL, NICKNAME);
+        MvcResult login = login(EMAIL, PASSWORD).andExpect(status().isOk()).andReturn();
+        Cookie refresh = login.getResponse().getCookie(REFRESH_COOKIE);
+
+        mockMvc.perform(patch("/api/members/me/password").header(AUTHORIZATION, "Bearer " + accessTokenOf(login))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("currentPassword", PASSWORD, "password", "newPassword456!"))))
+                .andExpect(status().isNoContent());
+
+        // 다른 기기에 있던 리프레시 토큰으로는 더 이상 재발급 불가
+        mockMvc.perform(post("/api/auth/reissue").cookie(refresh))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_MISMATCH"));
+
+        login(EMAIL, PASSWORD).andExpect(status().isUnauthorized());
+        login(EMAIL, "newPassword456!").andExpect(status().isOk());
     }
 }
