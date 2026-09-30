@@ -105,6 +105,14 @@ public abstract class IntegrationTestSupport {
                 .content(json(Map.of("email", email, "password", password))));
     }
 
+    // 가입하고 로그인해 Authorization 헤더 값을 돌려줌
+    protected String bearerOf(String email, String nickname) throws Exception {
+        signup(email, nickname);
+        MvcResult result = login(email, PASSWORD).andExpect(status().isOk()).andReturn();
+        return "Bearer " + accessTokenOf(result);
+    }
+
+
     protected String accessTokenOf(MvcResult result) throws Exception {
         return JsonPath.read(result.getResponse().getContentAsString(), "$.accessToken");
     }
