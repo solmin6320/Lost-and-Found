@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -61,6 +62,7 @@ public class JwtTokenProvider {
         );
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString()) // jti(토큰 고유 번호)
                 .subject(memberId) // 토큰 주체(회원 식별자PK)
                 .claim("category", category) // 커스텀 클레임(토큰 구분)
                 .issuedAt(now) // iat(발급 시각)
