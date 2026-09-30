@@ -14,11 +14,18 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import software.amazon.awssdk.services.s3.S3Client;
 import tools.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // 통합 테스트 공통 틀
 @SpringBootTest
@@ -30,6 +37,9 @@ public abstract class IntegrationTestSupport {
     private static final String TEST_SCHEMA = "lostfound_test";
     private static final int TEST_REDIS_DB = 1;
     private static final List<String> REDIS_PREFIXES = List.of("refresh:", "login:fail", "view:");
+
+    protected static final String PASSWORD = "password123!";
+    protected static final String REFRESH_COOKIE = "refreshToken";
 
     @Autowired
     protected MockMvc mockMvc;
@@ -80,5 +90,32 @@ public abstract class IntegrationTestSupport {
         assertThat(redisConnectionFactory.getDatabase())
                 .as("통합 테스트는 Redis %d번에서만 돈다", TEST_REDIS_DB).isEqualTo(TEST_REDIS_DB);
     }
+
+
+    protected void signup(String email, String nickname) throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("email", email, "password", PASSWORD, "nickname", nickname))))
+                .andExpect(status().isCreated());
+    }
+
+    protected ResultActions login(String email, String password) throws Exception {
+        return mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(Map.of("email", email, "password", password))));
+    }
+
+    protected String accessTokenOf(MvcResult result) throws Exception {
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.accessToken");
+    }
+
+    protected Long memberIdOf(String email) {
+        return jdbcTemplate.queryForObject("SELECT member_id FROM member WHERE email = ?", Long.class, email);
+    }
+
+    protected String json(Object body) {
+        return objectMapper.writeValueAsString(body);
+    }
+
 
 }
