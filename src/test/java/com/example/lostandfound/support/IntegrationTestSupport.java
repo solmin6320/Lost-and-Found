@@ -19,11 +19,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,6 +113,20 @@ public abstract class IntegrationTestSupport {
         signup(email, nickname);
         MvcResult result = login(email, PASSWORD).andExpect(status().isOk()).andReturn();
         return "Bearer " + accessTokenOf(result);
+    }
+
+
+    protected Long writePost(String bearer) throws Exception {
+        String body = mockMvc.perform(multipart("/api/posts").header(AUTHORIZATION, bearer)
+                        .param("type", "FOUND")
+                        .param("title", "파란 우산")
+                        .param("content", "2층 로비에서 주웠습니다")
+                        .param("category", "ETC")
+                        .param("location", "도서관")
+                        .param("lostFoundDate", LocalDate.now().minusDays(1).toString()))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
 

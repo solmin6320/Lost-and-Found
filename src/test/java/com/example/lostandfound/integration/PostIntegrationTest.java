@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,6 +127,50 @@ class PostIntegrationTest extends IntegrationTestSupport {
         mockMvc.perform(postForm(multipart("/api/posts")))
                 .andExpect(status().isUnauthorized());
         assertThat(count("post")).isZero();
+    }
+
+
+    @Test
+    @DisplayName("목록 썸네일은 가장 먼저 올린 사진이고 사진 없는 글은 null")
+    void listThumbnail() throws Exception {
+        Long withImages = createPost(owner, image("a.jpg"), image("b.jpg"));
+        Long noImage = createPost(owner);
+
+
+        String firstKey = jdbcTemplate.queryForObject(
+                "SELECT file_path FROM post_image WHERE post_id = ? ORDER BY image_id LIMIT 1",
+                String.class, withImages);
+
+        String body = mockMvc.perform(get("/api/posts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+
+        List<String> thumb = JsonPath.read(body, "$.content[?(@.id == " + withImages + ")].thumbnailUrl");
+        List<String> none = JsonPath.read(body, "$.content[?(@.id == " + noImage + ")].thumbnailUrl");
+
+        assertThat(thumb).containsExactly("https://integration-test.example/" + firstKey);
+        assertThat(none).containsExactly((String) null);
+    }
+
+    @Test
+    @DisplayName("내가 쓴 글은 내 것만 최신순으로 나오고 status로 거를 수 있음")
+    void myPosts() throws Exception {
+        Long first = createPost(owner);
+        Long second = createPost(owner);
+        createPost(other);
+
+        mockMvc.perform(changeStatus(first, owner, "DONE")).andExpect(status().isOk());
+
+        // 같은 초에 만들어져도 id 역순이 두 번째 정렬 기준
+        mockMvc.perform(get("/api/members/me/posts").header(AUTHORIZATION, owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(second));
+
+        mockMvc.perform(get("/api/members/me/posts").param("status", "DONE").header(AUTHORIZATION, owner))
+                .andExpect(jsonPath("$.page.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(first));
     }
 
 
