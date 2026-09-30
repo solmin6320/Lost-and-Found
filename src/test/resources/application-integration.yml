@@ -1,0 +1,14 @@
+# 통합 테스트 전용 - local 프로필 위에 덮어 씀
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/lostfound_test # 개발 DB와 분리
+
+  data:
+    redis:
+      database: 1
+
+cloud:
+  aws:
+    s3:
+      bucket: integration-test-bucket
+      base-url: https://integration-test.example
