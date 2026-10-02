@@ -38,6 +38,10 @@ jwt:
   access-token-expiration: 300000       # 5분(ms)
   refresh-token-expiration: 604800000   # 7일(ms)
 
+auth:
+  cookie:
+    secure: true # 운영(HTTPS) 기본값
+
 cloud:
   aws:
     region: ap-northeast-2   # 로컬, 운영 동일하므로 기본 파일에 둠
