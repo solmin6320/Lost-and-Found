@@ -1,5 +1,6 @@
 package com.example.lostandfound.service;
 
+import com.example.lostandfound.config.AuthCookieProperties;
 import com.example.lostandfound.dto.request.LoginRequest;
 import com.example.lostandfound.dto.response.LoginResponse;
 import com.example.lostandfound.exception.CustomException;
@@ -28,6 +29,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RefreshTokenService refreshTokenService;
     private final LoginAttemptService loginAttemptService;
+    private final AuthCookieProperties cookieProperties;
 
     // 로그인 결과를 담는 내부 전달용 객체
     public record LoginResult(LoginResponse response, ResponseCookie cookie) {
@@ -57,22 +59,6 @@ public class AuthService {
                 LoginResponse.of(accessToken, jwtProperties.accessTokenExpiration()),
                 buildRefreshTokenCookie(refreshToken)
         );
-    }
-
-    // 이메일, 비밀번호 인증 수행(실패시 카운트를 올리고 401 반환)
-    private Authentication authenticate(LoginRequest request) {
-        try {
-            // 아직 인증되지 않은 요청 객체
-            return authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
-            );
-        } catch (AuthenticationException e) {
-            loginAttemptService.recordFailure(request.email());
-
-            // 회원 없음과 비밀번호 불일치를 구분하지 않음
-            // 열거 공격 방어
-            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
-        }
     }
 
     // 리프레시 토큰으로 액세스, 리프레시 재발급(로테이션)
@@ -123,7 +109,7 @@ public class AuthService {
 
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "") // 값은 비움
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieProperties.secure())
                 .sameSite("Strict")
                 .path("/api/auth") // 발급 시와 동일
                 .maxAge(0) // 즉시 만료
@@ -149,10 +135,26 @@ public class AuthService {
     private ResponseCookie buildRefreshTokenCookie(String refreshToken) {
     return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
             .httpOnly(true) // JS 접근 차단(XSS 방어)
-            .secure(true) // HTTPS에서만 전송(테스트 시 false 필요)
+            .secure(cookieProperties.secure()) // HTTPS에서만 전송(운영 true, 로컬 yml에선 false)
             .sameSite("Strict") // 외부 사이트 요청에 미첨부(CSRF 방어)
             .path("/api/auth") // 인증 관련 경로에만 전송
             .maxAge(Duration.ofMillis(jwtProperties.refreshTokenExpiration()))
             .build();
+    }
+
+    // 이메일, 비밀번호 인증 수행(실패시 카운트를 올리고 401 반환)
+    private Authentication authenticate(LoginRequest request) {
+        try {
+            // 아직 인증되지 않은 요청 객체
+            return authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (AuthenticationException e) {
+            loginAttemptService.recordFailure(request.email());
+
+            // 회원 없음과 비밀번호 불일치를 구분하지 않음
+            // 열거 공격 방어
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.lostandfound.service;
 
+import com.example.lostandfound.config.AuthCookieProperties;
 import com.example.lostandfound.dto.request.LoginRequest;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
@@ -50,6 +51,9 @@ class AuthServiceTest {
 
     @Mock
     private CustomUserDetails userDetails;
+
+    @Mock
+    private AuthCookieProperties cookieProperties;
 
     @InjectMocks
     private AuthService authService;
@@ -118,6 +122,7 @@ class AuthServiceTest {
         given(jwtTokenProvider.createRefreshToken(authentication)).willReturn("refresh-token");
         given(jwtProperties.accessTokenExpiration()).willReturn(300000L);
         given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+        given(cookieProperties.secure()).willReturn(true);
 
         AuthService.LoginResult result = authService.login(request);
 
@@ -312,6 +317,31 @@ class AuthServiceTest {
         // 이름과 경로를 발급 때와 동일하게 작성
         assertThat(cookie.getName()).isEqualTo("refreshToken");
         assertThat(cookie.getPath()).isEqualTo("/api/auth");
+    }
+
+
+    @Test
+    @DisplayName("auth.cookie.secure가 false면 발급, 만료 쿠키 모두 Secure 없이 나감")
+    void cookieSecureFollowsProperty() {
+
+        given(cookieProperties.secure()).willReturn(false);
+        given(loginAttemptService.locked(request.email())).willReturn(false);
+
+        given(authenticationManager.authenticate(any())).willReturn(authentication);
+        given(authentication.getPrincipal()).willReturn(userDetails);
+        given(userDetails.getMemberId()).willReturn(1L);
+
+        given(jwtTokenProvider.createAccessToken(authentication)).willReturn("access-token");
+        given(jwtTokenProvider.createRefreshToken(authentication)).willReturn("refresh-token");
+
+        given(jwtProperties.accessTokenExpiration()).willReturn(300000L);
+        given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+
+        AuthService.LoginResult result = authService.login(request);
+        ResponseCookie expired = authService.logout(1L);
+
+        assertThat(result.cookie().isSecure()).isFalse();
+        assertThat(expired.isSecure()).isFalse();
     }
 
 
