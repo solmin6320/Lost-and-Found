@@ -195,6 +195,41 @@ class PostIntegrationTest extends IntegrationTestSupport {
         verify(s3Client, times(2)).deleteObject(any(DeleteObjectRequest.class));
     }
 
+    @Test
+    @DisplayName("목록 상태 필터는 여러 값을 받아 그중 하나인 글만 주고, 값이 하나, 없음, 잘못된 값도 그대로 동작")
+    void listStatusMulti() throws Exception {
+        Long open = createPost(owner);
+        Long inProgress = createPost(owner);
+        Long done = createPost(owner);
+        mockMvc.perform(changeStatus(inProgress, owner, "IN_PROGRESS")).andExpect(status().isOk());
+
+        mockMvc.perform(changeStatus(done, owner, "DONE")).andExpect(status().isOk());
+
+        // 프론트 기본값 "진행 중"
+        String body = mockMvc.perform(get("/api/posts").param("status", "OPEN", "IN_PROGRESS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andReturn().getResponse().getContentAsString();
+        List<Number> ids = JsonPath.read(body, "$.content[*].id");
+
+        assertThat(ids).extracting(Number::longValue).containsExactlyInAnyOrder(open, inProgress);
+
+
+        // 값 하나는 지금처럼
+        mockMvc.perform(get("/api/posts").param("status", "DONE"))
+                .andExpect(jsonPath("$.page.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(done));
+
+        // 안 보내면 전체
+        mockMvc.perform(get("/api/posts"))
+                .andExpect(jsonPath("$.page.totalElements").value(3));
+
+        // 없는 상태 값은 400
+        mockMvc.perform(get("/api/posts").param("status", "OPEN", "XX"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+    }
+
 
 
     private Long createPost(String token, MockMultipartFile... images) throws Exception {
