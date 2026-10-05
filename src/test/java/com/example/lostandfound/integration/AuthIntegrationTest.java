@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.RequestBuilder;
 
 import java.util.Map;
 
@@ -125,5 +126,77 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 
         login(EMAIL, PASSWORD).andExpect(status().isUnauthorized());
         login(EMAIL, "newPassword456!").andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("이메일은 공백을 걷고 소문자로 저장, 대소문자가 달라도 같은 계정으로 로그인")
+    void emailNormalized() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "email", "  Mixed@Test.COM ",
+                                "password", PASSWORD,
+                                "nickname", "정규화"))))
+                .andExpect(status().isCreated());
+
+        String saved = jdbcTemplate.queryForObject("SELECT email FROM member", String.class);
+        assertThat(saved).isEqualTo("mixed@test.com");
+
+        login("MIXED@test.com", PASSWORD)
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("대소문자만 바꿔 틀려도 같은 잠금으로 세어 6번째는 423")
+    void lockNotBypassedByCase() throws Exception {
+        signup(EMAIL, NICKNAME);
+
+        String[] variants = {
+                "AUTH@test.com",
+                "Auth@Test.com",
+                "auth@TEST.com",
+                "aUtH@test.com",
+                "auth@test.COM"
+        };
+
+        for (String variant : variants) {
+            login(variant, "wrong-password")
+                    .andExpect(status().isUnauthorized());
+        }
+
+
+        login("AuTh@TeSt.CoM", PASSWORD)
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
+    }
+
+    @Test
+    @DisplayName("닉네임은 앞뒤 공백 제거, 자기 닉네임 대소문자 변경은 허용, 남의 것은 409")
+    void nicknameNormalized() throws Exception {
+        String me = bearerOf("me@test.com", "Kim");
+        signup("other@test.com", "Lee");
+
+        // 자기 닉네임의 대소문자만 바꾸기
+        mockMvc.perform(changeNickname(me, "kim"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("kim"));
+
+        // 남의 닉네임을 대소문자, 공백만 바꿔 쓰기
+        mockMvc.perform(changeNickname(me, "  LEE  "))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_NICKNAME"));
+
+        // 앞뒤 공백은 없애고 저장
+        mockMvc.perform(changeNickname(me, "  테스터  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("테스터"));
+    }
+
+
+    private RequestBuilder changeNickname(String bearer, String nickname) {
+        return patch("/api/members/me")
+                .header(AUTHORIZATION, bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(Map.of("nickname", nickname)));
     }
 }
