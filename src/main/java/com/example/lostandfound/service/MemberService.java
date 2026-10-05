@@ -78,7 +78,7 @@ public class MemberService {
             return MemberResponse.from(member);
         }
 
-        if (memberRepository.existsByNickname(request.nickname())) {
+        if (memberRepository.existsByNicknameAndIdNot(request.nickname(), memberId)) {
             throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
         }
 

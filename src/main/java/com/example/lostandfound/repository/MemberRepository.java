@@ -15,4 +15,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 사용자 닉네임이 DB에 존재하는지 여부를 반환
     boolean existsByNickname(String nickname);
+
+    // 나를 제외한 다른 회원이 이 닉네임을 쓰는지 여부를 반환
+    boolean existsByNicknameAndIdNot(String nickname, Long id);
 }
