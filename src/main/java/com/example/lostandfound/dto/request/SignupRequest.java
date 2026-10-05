@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.Locale;
+
 // record 로 생성자, 접근자, toString 등 자동 생성
 public record SignupRequest(
 
@@ -23,4 +25,10 @@ public record SignupRequest(
     @Size(max = 20, message = "닉네임은 20자를 초과할 수 없습니다")
     String nickname
 
-    ) {}
+    ) {
+    // 바인딩 직후 다듬기
+    public SignupRequest {
+        email = (email == null) ? null : email.strip().toLowerCase(Locale.ROOT);
+        nickname = (nickname == null) ? null : nickname.strip();
+    }
+}

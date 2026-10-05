@@ -3,6 +3,8 @@ package com.example.lostandfound.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+import java.util.Locale;
+
 // 회원가입과 달리 길이, 형식 제약을 두지 않음
 // 비밀번호 정책을 응답으로 노출하지 않음
 public record LoginRequest(
@@ -13,4 +15,8 @@ public record LoginRequest(
         @NotBlank(message = "비밀번호는 필수입니다")
         String password
 ) {
+        // 대소문자만 바꿔 잠금
+        public LoginRequest {
+                email = (email == null) ? null : email.strip().toLowerCase(Locale.ROOT);
+        }
 }
