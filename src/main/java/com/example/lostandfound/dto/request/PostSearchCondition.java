@@ -7,13 +7,14 @@ import jakarta.validation.constraints.AssertTrue;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record PostSearchCondition(
 
         String keyword, // title 또는 content 부분 일치
         PostType type,
         PostCategory category,
-        PostStatus status,
+        List<PostStatus> status,
         String location, // 부분 일치(자유 입력)
 
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
