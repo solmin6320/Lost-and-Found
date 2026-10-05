@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 // 모든 컨트롤러에서 발생하는 예외를 한곳에서 가로채 공통 형식으로 응답
@@ -95,6 +96,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 400
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 업로드 크기 초과(한 장 10MB, 합계 60MB)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException() {
+
+        ErrorCode errorCode = ErrorCode.FILE_TOO_LARGE;
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 413
                 .body(ErrorResponse.of(errorCode));
     }
 

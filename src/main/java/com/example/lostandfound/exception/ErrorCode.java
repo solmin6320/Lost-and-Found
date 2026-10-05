@@ -25,9 +25,10 @@ public enum ErrorCode {
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "본인이 작성한 게시글, 댓글만 처리할 수 있습니다"),
     INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "완료된 게시글은 상태를 되돌릴 수 없습니다"),
 
-    // 이미지 예외 처리(400)
+    // 이미지 예외 처리(400, 413)
     INVALID_IMAGE_EXTENSION(HttpStatus.BAD_REQUEST, "허용되지 않는 이미지 확장자입니다"),
     EXCEEDED_IMAGE_COUNT(HttpStatus.BAD_REQUEST, "이미지는 최대 5장까지 첨부할 수 있습니다"),
+    FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "사진은 한 장에 10MB, 합쳐서 60MB까지 올릴 수 있습니다"),
 
     // 공통 예외 처리(400, 404, 405, 500)
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다"),
