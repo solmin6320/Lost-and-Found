@@ -27,3 +27,66 @@ jobs:
 
       - name: 빌드 및 테스트
         run: ./gradlew build
+
+  integration:
+    name: 통합 테스트
+    runs-on: ubuntu-latest
+
+    # 작업마다 새 DB · Redis를 띄움(테스트 전용, 끝나면 사라짐)
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root
+          MARIADB_DATABASE: lostfound_test   # IntegrationTestSupport 안전장치와 같은 이름
+          MARIADB_USER: ci
+          MARIADB_PASSWORD: ci-pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=20
+
+    # application-local.yml이 없으므로 CI 전용 가짜 값(S3는 테스트에서 가짜로 대체)
+    env:
+      DB_USERNAME: ci
+      DB_PASSWORD: ci-pass
+      AWS_ACCESS_KEY: ci-dummy
+      AWS_SECRET_KEY: ci-dummy
+      AWS_S3_BUCKET: integration-test-bucket
+      AWS_S3_BASE_URL: https://integration-test.example
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: JDK 21 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Gradle 실행 권한 부여
+        run: chmod +x ./gradlew
+
+      # 서명 키를 파일에 박지 않고 실행마다 새로 만듦
+      - name: JWT 서명 키 생성
+        run: echo "JWT_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: 통합 테스트
+        run: ./gradlew integrationTest
+
+      - name: 실패하면 테스트 리포트 올리기
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-report
+          path: build/reports/tests/integrationTest
