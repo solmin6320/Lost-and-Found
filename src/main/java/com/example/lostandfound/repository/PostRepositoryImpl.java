@@ -33,7 +33,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
                 keywordContains(condition.keyword()),
                 typeEq(condition.type()),
                 categoryEq(condition.category()),
-                statusEq(condition.status()),
+                statusIn(condition.status()),
                 locationContains(condition.location()),
                 lostFoundDateGoe(condition.from()),
                 lostFoundDateLoe(condition.to())
@@ -76,8 +76,8 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         return category == null ? null : post.category.eq(category);
     }
 
-    private BooleanExpression statusEq(PostStatus status) {
-        return status == null ? null : post.status.eq(status);
+    private BooleanExpression statusIn(List<PostStatus> statuses) {
+        return (statuses == null || statuses.isEmpty()) ? null : post.status.in(statuses);
     }
 
     private BooleanExpression locationContains(String location) {
@@ -91,4 +91,6 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     private BooleanExpression lostFoundDateLoe(LocalDate to) {
         return to == null ? null : post.lostFoundDate.loe(to);
     }
+
 }
+
