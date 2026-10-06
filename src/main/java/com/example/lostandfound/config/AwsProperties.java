@@ -22,8 +22,8 @@ public record AwsProperties(
     }
 
     public record Credentials(
-            @NotBlank String accessKey,
-            @NotBlank String secretKey
+            String accessKey,
+            String secretKey
     ) {
 
     }
