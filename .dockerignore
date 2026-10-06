@@ -1,0 +1,10 @@
+.git
+.gradle
+.idea
+build
+*.iml
+HELP.md
+
+# 로컬, 운영 설정을 이미지에 넣지 않음
+src/main/resources/application-local.yml
+src/main/resources/application-prod.yml
