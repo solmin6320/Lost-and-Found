@@ -1,6 +1,7 @@
 package com.example.lostandfound.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,6 +28,28 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // Enum에 정의된 HTTP 상태
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    // 동시 저장으로 UNIQUE 위반 예외 처리
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+
+        String cause = String.valueOf(e.getMostSpecificCause().getMessage());
+
+        ErrorCode errorCode;
+
+        if (cause.contains("nickname'")) {
+            errorCode = ErrorCode.DUPLICATE_NICKNAME;
+        } else if (cause.contains("email'")) {
+            errorCode = ErrorCode.DUPLICATE_EMAIL;
+        } else {
+            log.error("데이터 무결성 위반", e); // 그 밖은 500
+            errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+        }
+
+        return ResponseEntity
+                .status(errorCode.getStatus()) // 409 또는 500
                 .body(ErrorResponse.of(errorCode));
     }
 
