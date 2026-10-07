@@ -72,6 +72,13 @@ public class Post {
     // 수정일
     private LocalDateTime updatedAt;
 
+    // 주인 확인 질문
+    @Column(name = "verification_question", length = 200)
+    private String verificationQuestion;
+
+    @Column(name = "owner_verified", nullable = false)
+    private boolean ownerVerified;
+
 
     // 첨부 이미지(최대 5장)
     // cascade를 사용하여 게시글 저장, 삭제가 이미지에도 전파
@@ -83,7 +90,7 @@ public class Post {
     // Builder로만 생성 가능하도록 강제
     @Builder
     private Post(Member member, PostType type, String title, String content,
-                 PostCategory category, String location, LocalDate lostFoundDate) {
+                 PostCategory category, String location, LocalDate lostFoundDate, String verificationQuestion) {
         this.member = member;
         this.type = type;
         this.title = title;
@@ -91,6 +98,7 @@ public class Post {
         this.category = category;
         this.location = location;
         this.lostFoundDate = lostFoundDate;
+        this.verificationQuestion = verificationQuestion;
 
         this.status = PostStatus.OPEN;   // 등록 시 항상 게시중
         this.viewCount = 0;
@@ -129,6 +137,13 @@ public class Post {
         this.lostFoundDate = lostFoundDate;
         this.updatedAt = LocalDateTime.now();
     }
+
+    // 확인 질문 변경
+    public void changeVerificationQuestion(String verificationQuestion) {
+        this.verificationQuestion = verificationQuestion;
+        this.updatedAt = LocalDateTime.now();
+    }
+
 
     // 비우기만 함
     public void clearImages() {
