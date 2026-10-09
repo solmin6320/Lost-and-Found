@@ -34,7 +34,15 @@ public enum ErrorCode {
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청하신 경로를 찾을 수 없습니다"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청방식입니다"),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다");
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다"),
+
+    // 주인 확인 요청 예외 처리(404, 400, 409)
+    CLAIM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주인 확인 요청입니다"),
+    CLAIM_OWN_POST(HttpStatus.BAD_REQUEST, "내가 쓴 글에는 요청할 수 없습니다"),
+    CLAIM_NOT_ACCEPTING(HttpStatus.CONFLICT, "게시중인 글에만 요청하거나 승인할 수 있습니다"),
+    DUPLICATE_CLAIM(HttpStatus.CONFLICT, "이 글에는 이미 요청을 보냈습니다"),
+    INVALID_CLAIM_STATUS(HttpStatus.CONFLICT, "지금 요청 상태에서는 할 수 없는 동작입니다"),
+    CLAIM_IN_PROGRESS(HttpStatus.CONFLICT, "승인된 요청이 있어 상태를 직접 바꿀 수 없습니다");
 
 
     private final HttpStatus status;
