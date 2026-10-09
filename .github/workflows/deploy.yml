@@ -82,7 +82,7 @@ jobs:
           aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
             --query '[StandardOutputContent, StandardErrorContent]' --output text
           echo "결과: $STATUS"
-          ["$STATUS" = "Success"]
+          [ "$STATUS" = "Success" ]
 
       - name: 사이트로 확인(사용자와 같은 길)
         env:
