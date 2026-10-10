@@ -144,10 +144,25 @@ public class Post {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // 주인 확인 요청 승인
+    public void startHandover() {
+        if (this.status != PostStatus.OPEN) {
+            throw new CustomException(ErrorCode.CLAIM_NOT_ACCEPTING);
+        }
+        this.status = PostStatus.IN_PROGRESS;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 주인이 받은 상황
+    public void completeByOwner() {
+        this.status = PostStatus.DONE;
+        this.ownerVerified = true;
+        this.updatedAt = LocalDateTime.now();
+    }
+
 
     // 비우기만 함
     public void clearImages() {
         this.images.clear();
     }
-
 }
