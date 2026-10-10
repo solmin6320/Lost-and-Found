@@ -2,9 +2,11 @@ package com.example.lostandfound.repository;
 
 import com.example.lostandfound.entity.Post;
 import com.example.lostandfound.entity.PostStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +36,9 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     Page<Post> findMyPosts(@Param("memberId") Long memberId,
                            @Param("status")PostStatus status,
                            Pageable pageable);
+
+    // 같은 글을 동시에 승인하지 않게 행 잠금
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Post p where p.id = :id")
+    Optional<Post> findByIdForUpdate(@Param("id") Long id);
 }
