@@ -87,9 +87,68 @@ public class ClaimService {
                 .map(MyClaimResponse::from);
     }
 
+    // 승인 - 글쓴이만
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public ClaimResponse approve(Long claimId, Long memberId) {
+
+        Claim claim = findClaim(claimId);
+
+        Post post = postRepository.findByIdForUpdate(claim.getPost().getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        checkAuthor(post, memberId);
+
+        claim.approve();
+
+        return ClaimResponse.from(claim);
+    }
+
+    // 거절 - 글쓴이만
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public ClaimResponse reject(Long claimId, Long memberId) {
+
+        Claim claim = findClaim(claimId);
+
+        checkAuthor(claim.getPost(), memberId);
+
+        claim.reject();
+
+        return ClaimResponse.from(claim);
+    }
+
+    // 받은 쪽 - 물건을 받는 쪽(주인)
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public ClaimResponse receive(Long claimId, Long memberId) {
+
+        Claim claim = findClaim(claimId);
+
+        if (!claim.receiverId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        claim.receive();
+
+        return ClaimResponse.from(claim);
+    }
+
     private Post findPost(Long postId) {
 
         return postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+    }
+
+    private Claim findClaim(Long claimId) {
+        return claimRepository.findById(claimId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CLAIM_NOT_FOUND));
+    }
+
+    // 글쓴이인지 확인
+    private void checkAuthor(Post post, Long memberId) {
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
     }
 }
