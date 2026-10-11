@@ -10,10 +10,7 @@ import com.example.lostandfound.dto.response.PostStatusResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
-import com.example.lostandfound.repository.CommentRepository;
-import com.example.lostandfound.repository.MemberRepository;
-import com.example.lostandfound.repository.PostImageRepository;
-import com.example.lostandfound.repository.PostRepository;
+import com.example.lostandfound.repository.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +59,9 @@ public class PostServiceTest {
     private PostImageRepository postImageRepository;
 
     @Mock
+    private ClaimRepository claimRepository;
+
+    @Mock
     private S3Service s3Service;
 
     // 설정값은 목이 아니라 실제 객체
@@ -75,7 +75,7 @@ public class PostServiceTest {
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties);
+        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties, claimRepository);
     }
 
     @Test
