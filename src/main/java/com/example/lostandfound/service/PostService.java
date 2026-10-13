@@ -113,8 +113,11 @@ public class PostService {
         // 개수가 자명하므로 COUNT를 생략
         long totalCommentCount = (comments.size() < COMMENT_PREVIEW_SIZE) ? comments.size() : commentRepository.countByPostId(postId);
 
+        // 주인 확인 완료 글만 받음 처리된 요청을 찾음
+        Claim receivedClaim = post.isOwnerVerified() ? claimRepository.findFirstByPostIdAndStatus(postId, ClaimStatus.RECEIVED)
+                                                       .orElse(null) : null;
 
-        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl());
+        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl(), receivedClaim);
     }
 
     // 소유자 검증이 필요하므로 처리

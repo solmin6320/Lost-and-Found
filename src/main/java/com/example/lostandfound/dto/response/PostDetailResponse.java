@@ -26,10 +26,13 @@ public record PostDetailResponse(
         LocalDateTime updatedAt,
         List<PostImageResponse> images,
          List<CommentResponse> comments,
-        long totalCommentCount
+        long totalCommentCount,
+        String verificationQuestion,
+        boolean ownerVerified,
+        ReturnRecordResponse returnRecord
 ) {
 
-    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount, String imageBaseUrl) {
+    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount, String imageBaseUrl, Claim receivedClaim) {
 
         return new PostDetailResponse(
                 post.getId(),
@@ -51,7 +54,10 @@ public record PostDetailResponse(
                 comments.stream()
                         .map(CommentResponse::from)
                         .toList(),
-                totalCommentCount
+                totalCommentCount,
+                post.getVerificationQuestion(),
+                post.isOwnerVerified(),
+                receivedClaim == null ? null : ReturnRecordResponse.from(receivedClaim)
         );
     }
 }
