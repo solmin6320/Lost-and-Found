@@ -72,6 +72,7 @@ public abstract class IntegrationTestSupport {
         verifyTestStorage();
 
         // FK 때문에 자식 테이블부터
+        jdbcTemplate.update("DELETE FROM claim");
         jdbcTemplate.update("DELETE FROM comment");
         jdbcTemplate.update("DELETE FROM post_image");
         jdbcTemplate.update("DELETE FROM post");
