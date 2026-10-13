@@ -36,13 +36,19 @@ public record PostUpdateRequest(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         LocalDate lostFoundDate,
 
+        @Size(max = 200, message = "확인 질문은 200자를 초과할 수 없습니다")
+        String verificationQuestion,
+
         // 기존 이미지를 지우겠다는 명시적 의사
         Boolean removeImages
 
 ) {
 
+
     // 안 보내면 null로 오므로 false 고정
     public PostUpdateRequest {
         removeImages = (removeImages != null) && removeImages;
+        verificationQuestion = (verificationQuestion == null || verificationQuestion.isBlank())
+                ? null : verificationQuestion.strip();
     }
 }

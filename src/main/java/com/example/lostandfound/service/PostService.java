@@ -4,17 +4,11 @@ import com.example.lostandfound.config.AwsProperties;
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.request.PostUpdateRequest;
-import com.example.lostandfound.dto.response.PostDetailResponse;
-import com.example.lostandfound.dto.response.PostListResponse;
-import com.example.lostandfound.dto.response.PostResponse;
-import com.example.lostandfound.dto.response.PostStatusResponse;
+import com.example.lostandfound.dto.response.*;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
-import com.example.lostandfound.repository.CommentRepository;
-import com.example.lostandfound.repository.MemberRepository;
-import com.example.lostandfound.repository.PostImageRepository;
-import com.example.lostandfound.repository.PostRepository;
+import com.example.lostandfound.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +33,7 @@ public class PostService {
     private final PostImageRepository postImageRepository;
     private final S3Service s3Service;
     private final AwsProperties awsProperties;
+    private final ClaimRepository claimRepository;
 
     // 상세 화면에 먼저 보여줄 댓글 수
     private static final int COMMENT_PREVIEW_SIZE = 20;
@@ -69,6 +64,7 @@ public class PostService {
                 .category(request.category())
                 .location(request.location())
                 .lostFoundDate(request.lostFoundDate())
+                .verificationQuestion(request.verificationQuestion())
                 .build();
 
         // 객체 키에 postId가 들어가므로 먼저 저장
@@ -114,8 +110,25 @@ public class PostService {
         // 개수가 자명하므로 COUNT를 생략
         long totalCommentCount = (comments.size() < COMMENT_PREVIEW_SIZE) ? comments.size() : commentRepository.countByPostId(postId);
 
+        // 주인 확인 완료 글만 받음 처리된 요청을 찾음
+        Claim receivedClaim = post.isOwnerVerified() ? claimRepository.findFirstByPostIdAndStatus(postId, ClaimStatus.RECEIVED)
+                                                       .orElse(null) : null;
+        // 보는 사람에 따라 하나 더 싣기
+        Long pendingClaimCount = null;
+        MyClaimSummaryResponse myClaim = null;
 
-        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl());
+        if (memberId != null) {
+            if (post.getMember().getId().equals(memberId)) {
+                pendingClaimCount = claimRepository.countByPostIdAndStatus(postId, ClaimStatus.PENDING);
+            } else {
+                myClaim = claimRepository.findByPostIdAndClaimantId(postId, memberId)
+                        .map(MyClaimSummaryResponse::from)
+                        .orElse(null);
+            }
+        }
+
+
+        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl(), receivedClaim, pendingClaimCount, myClaim);
     }
 
     // 소유자 검증이 필요하므로 처리
@@ -130,6 +143,10 @@ public class PostService {
         // 작성자 본인만 변경 가능
         if (!post.getMember().getId().equals(memberId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        if (claimRepository.existsByPostIdAndStatus(postId, ClaimStatus.APPROVED)) {
+            throw new CustomException(ErrorCode.CLAIM_IN_PROGRESS);
         }
 
         // 전이 규칙 판단은 엔티티가 담당
@@ -151,6 +168,7 @@ public class PostService {
         }
 
         post.update(request.type(), request.title(), request.content(), request.category(), request.location(), request.lostFoundDate());
+        post.changeVerificationQuestion(request.verificationQuestion());
 
         replaceImages(post, filterEmpty(images), request.removeImages());
 
@@ -176,6 +194,10 @@ public class PostService {
 
         // 댓글을 먼저 지움
         commentRepository.deleteByPostId(postId);
+
+        // 확인 요청도 먼저 지움
+        claimRepository.deleteAllByPostId(postId);
+
         postRepository.delete(post);
 
         s3Service.deleteAfterCommit(keys);

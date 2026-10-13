@@ -21,6 +21,7 @@ public record PostListResponse(
         PostStatus status,
         int viewCount,
         LocalDateTime createdAt,
+        boolean ownerVerified,
         String thumbnailUrl // 이미지가 없으면 null
 ) {
 
@@ -38,6 +39,7 @@ public record PostListResponse(
                 post.getStatus(),
                 post.getViewCount(),
                 post.getCreatedAt(),
+                post.isOwnerVerified(),
                 thumbnailUrl
         );
     }

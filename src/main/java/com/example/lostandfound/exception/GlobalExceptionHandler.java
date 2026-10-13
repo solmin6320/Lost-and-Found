@@ -39,7 +39,9 @@ public class GlobalExceptionHandler {
 
         ErrorCode errorCode;
 
-        if (cause.contains("nickname'")) {
+        if (cause.contains("uk_claim_post_claimant")) {
+            errorCode = ErrorCode.DUPLICATE_CLAIM;
+        } else if (cause.contains("nickname'")) {
             errorCode = ErrorCode.DUPLICATE_NICKNAME;
         } else if (cause.contains("email'")) {
             errorCode = ErrorCode.DUPLICATE_EMAIL;

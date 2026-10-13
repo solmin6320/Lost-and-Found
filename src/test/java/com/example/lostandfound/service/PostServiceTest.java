@@ -10,10 +10,7 @@ import com.example.lostandfound.dto.response.PostStatusResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
-import com.example.lostandfound.repository.CommentRepository;
-import com.example.lostandfound.repository.MemberRepository;
-import com.example.lostandfound.repository.PostImageRepository;
-import com.example.lostandfound.repository.PostRepository;
+import com.example.lostandfound.repository.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +59,9 @@ public class PostServiceTest {
     private PostImageRepository postImageRepository;
 
     @Mock
+    private ClaimRepository claimRepository;
+
+    @Mock
     private S3Service s3Service;
 
     // 설정값은 목이 아니라 실제 객체
@@ -75,7 +75,7 @@ public class PostServiceTest {
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties);
+        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties, claimRepository);
     }
 
     @Test
@@ -219,7 +219,7 @@ eq(1L), any(Pageable.class)))
 
         PostCreateRequest request = new PostCreateRequest(
                 PostType.LOST, "지갑 잃어버렸어요", "신흥역 4번 출구 근처입니다",
-                PostCategory.WALLET, "신흥역 4번 출구", LocalDate.of(2026, 9, 14)
+                PostCategory.WALLET, "신흥역 4번 출구", LocalDate.of(2026, 9, 14), null
         );
 
         PostResponse response = postService.create(request, 1L, null);
@@ -282,7 +282,7 @@ eq(1L), any(Pageable.class)))
         return new PostCreateRequest(
                 PostType.LOST, "지갑 잃어버렸어요", "신흥역 4번 출구 근처입니다",
                 PostCategory.WALLET, "신흥역 4번 출구",
-                LocalDate.of(2026, 9, 14)
+                LocalDate.of(2026, 9, 14), null
         );
     }
 
@@ -575,6 +575,101 @@ eq(1L), any(Pageable.class)))
         verify(postImageRepository, never()).findThumbnails(any());
     }
 
+    @Test
+    @DisplayName("확인 질문이 공백이면 null, 앞뒤 공백은 제거")
+    void createRequest_blankQuestion_becomesNull() {
+
+        // 공백만 넣은 경우
+        PostCreateRequest blank = new PostCreateRequest(
+                PostType.FOUND, "지갑 주웠어요", "신흥역 근처",
+                PostCategory.WALLET, "신흥역", LocalDate.of(2026, 10, 13), "   "
+        );
+
+        // 앞뒤에 공백이 붙은 질문을 넣은 경우
+        PostCreateRequest padded = new PostCreateRequest(
+                PostType.FOUND, "지갑 주웠어요", "신흥역 근처",
+                PostCategory.WALLET, "신흥역", LocalDate.of(2026, 10, 13), "   안에 든 카드 색은? "
+        );
+
+        assertThat(blank.verificationQuestion()).isNull();
+        assertThat(padded.verificationQuestion()).isEqualTo("안에 든 카드 색은?");
+    }
+
+   @Test
+   @DisplayName("글쓴이가 상세를 보면 대기 요청 수가 실리고 내 요청은 없음")
+   void getDetails_author_hasPendingCount() {
+
+        Post post = createPost(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        given(claimRepository.countByPostIdAndStatus(1L, ClaimStatus.PENDING)).willReturn(2L);
+
+        PostDetailResponse response = postService.getDetail(1L, 1L); // 작성자가 조회
+
+       assertThat(response.pendingClaimCount()).isEqualTo(2L);
+       assertThat(response.myClaim()).isNull();
+       verify(claimRepository, never()).findByPostIdAndClaimantId(anyLong(), anyLong());
+   }
+
+   @Test
+   @DisplayName("요청을 보낸 사람이 상세를 보면 내 요청이 실리고 대기 요청 수는 없음")
+   void getDetail_claimant_hasMyClaim() {
+
+        Post post = createPost(1L, 1L);
+
+        Member claimant = Member.builder()
+                .email("claimant@test.com")
+                .password("encoded")
+                .nickname("요청자")
+                .build();
+
+        ReflectionTestUtils.setField(claimant, "id", 5L);
+
+        Claim claim = Claim.builder()
+                .post(post)
+                .claimant(claimant)
+                .answer("카드 두 장이 들어 있어요")
+                .build();
+        ReflectionTestUtils.setField(claim, "id", 10L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        given(claimRepository.findByPostIdAndClaimantId(1L, 5L)).willReturn(Optional.of(claim));
+
+        PostDetailResponse response = postService.getDetail(1L, 5L); // 요청자가 조회
+
+       assertThat(response.myClaim().id()).isEqualTo(10L);
+       assertThat(response.myClaim().status()).isEqualTo(ClaimStatus.PENDING);
+       assertThat(response.pendingClaimCount()).isNull();
+
+       verify(claimRepository, never()).countByPostIdAndStatus(anyLong(), any());
+   }
+
+   @Test
+   @DisplayName("비로그인이면 대기 요청 수와 내 요청 모두 없고 요청 조회도 하지 않음")
+   void getDetail_anonymous_noClaimInfo() {
+
+        Post post = createPost(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        PostDetailResponse response = postService.getDetail(1L, null);
+
+        assertThat(response.pendingClaimCount()).isNull();
+        assertThat(response.myClaim()).isNull();
+        verifyNoInteractions(claimRepository);
+   }
+
 
     private MultipartFile createFile(String filename) {
 
@@ -634,7 +729,7 @@ eq(1L), any(Pageable.class)))
         return new PostUpdateRequest(
                 PostType.LOST, "제목을 고쳤습니다", "본문도 고쳤습니다",
                 PostCategory.WALLET, "신흥역 4번 출구",
-                LocalDate.of(2026, 9, 14), removeImages
+                LocalDate.of(2026, 9, 14), null, removeImages
         );
 
    }
