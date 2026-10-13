@@ -219,7 +219,7 @@ eq(1L), any(Pageable.class)))
 
         PostCreateRequest request = new PostCreateRequest(
                 PostType.LOST, "지갑 잃어버렸어요", "신흥역 4번 출구 근처입니다",
-                PostCategory.WALLET, "신흥역 4번 출구", LocalDate.of(2026, 9, 14)
+                PostCategory.WALLET, "신흥역 4번 출구", LocalDate.of(2026, 9, 14), null
         );
 
         PostResponse response = postService.create(request, 1L, null);
@@ -282,7 +282,7 @@ eq(1L), any(Pageable.class)))
         return new PostCreateRequest(
                 PostType.LOST, "지갑 잃어버렸어요", "신흥역 4번 출구 근처입니다",
                 PostCategory.WALLET, "신흥역 4번 출구",
-                LocalDate.of(2026, 9, 14)
+                LocalDate.of(2026, 9, 14), null
         );
     }
 
@@ -575,6 +575,26 @@ eq(1L), any(Pageable.class)))
         verify(postImageRepository, never()).findThumbnails(any());
     }
 
+    @Test
+    @DisplayName("확인 질문이 공백이면 null, 앞뒤 공백은 제거")
+    void createRequest_blankQuestion_becomesNull() {
+
+        // 공백만 넣은 경우
+        PostCreateRequest blank = new PostCreateRequest(
+                PostType.FOUND, "지갑 주웠어요", "신흥역 근처",
+                PostCategory.WALLET, "신흥역", LocalDate.of(2026, 10, 13), "   "
+        );
+
+        // 앞뒤에 공백이 붙은 질문을 넣은 경우
+        PostCreateRequest padded = new PostCreateRequest(
+                PostType.FOUND, "지갑 주웠어요", "신흥역 근처",
+                PostCategory.WALLET, "신흥역", LocalDate.of(2026, 10, 13), "   안에 든 카드 색은? "
+        );
+
+        assertThat(blank.verificationQuestion()).isNull();
+        assertThat(padded.verificationQuestion()).isEqualTo("안에 든 카드 색은?");
+    }
+
 
     private MultipartFile createFile(String filename) {
 
@@ -634,7 +654,7 @@ eq(1L), any(Pageable.class)))
         return new PostUpdateRequest(
                 PostType.LOST, "제목을 고쳤습니다", "본문도 고쳤습니다",
                 PostCategory.WALLET, "신흥역 4번 출구",
-                LocalDate.of(2026, 9, 14), removeImages
+                LocalDate.of(2026, 9, 14), null, removeImages
         );
 
    }

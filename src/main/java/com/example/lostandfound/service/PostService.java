@@ -67,6 +67,7 @@ public class PostService {
                 .category(request.category())
                 .location(request.location())
                 .lostFoundDate(request.lostFoundDate())
+                .verificationQuestion(request.verificationQuestion())
                 .build();
 
         // 객체 키에 postId가 들어가므로 먼저 저장
@@ -153,6 +154,7 @@ public class PostService {
         }
 
         post.update(request.type(), request.title(), request.content(), request.category(), request.location(), request.lostFoundDate());
+        post.changeVerificationQuestion(request.verificationQuestion());
 
         replaceImages(post, filterEmpty(images), request.removeImages());
 

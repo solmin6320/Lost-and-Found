@@ -37,7 +37,14 @@ public record PostCreateRequest(
         @NotNull(message = "분실ㆍ습득 일자는 필수입니다")
         @PastOrPresent(message = "분실ㆍ습득 일자는 오늘 이후일 수 없습니다")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) // 폼 필드는 문자열로 오므로 형식 명시
-        LocalDate lostFoundDate
-) {
+        LocalDate lostFoundDate,
 
+        // 선택 입력 - 사진에 안 보이는 것을 묻는 질문
+        @Size(max = 200, message = "확인 질문은 200자를 초과할 수 없습니다")
+        String verificationQuestion
+) {
+        // 공백만이면 null로 저장
+        public PostCreateRequest {
+                verificationQuestion = (verificationQuestion == null || verificationQuestion.isBlank()) ? null : verificationQuestion.strip();
+        }
 }
