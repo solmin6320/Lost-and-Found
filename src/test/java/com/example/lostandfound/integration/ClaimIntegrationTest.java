@@ -191,13 +191,13 @@ public class ClaimIntegrationTest extends IntegrationTestSupport {
     private Long writeFoundPost(String bearer) throws Exception {
 
         String body = mockMvc.perform(multipart("/api/posts").header(AUTHORIZATION, bearer)
-                .param("type", "LOST")
-                .param("title", "갈색 가죽 지갑")
-                .param("content", "학생회관 근처에서 잃어버렸어요")
-                .param("category", "WALLET")
-                .param("location", "학생회관")
-                .param("lostFoundDate", LocalDate.now().minusDays(1).toString())
-                .param("verificationQuestion", "지갑 안쪽에 적힌 글자는?"))
+                        .param("type", "FOUND")
+                        .param("title", "카드 지갑")
+                        .param("content", "1층 로비에서 주웠습니다")
+                        .param("category", "WALLET")
+                        .param("location", "도서관")
+                        .param("lostFoundDate", LocalDate.now().minusDays(1).toString())
+                        .param("verificationQuestion", QUESTION))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
