@@ -4,10 +4,7 @@ import com.example.lostandfound.config.AwsProperties;
 import com.example.lostandfound.dto.request.PostCreateRequest;
 import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.request.PostUpdateRequest;
-import com.example.lostandfound.dto.response.PostDetailResponse;
-import com.example.lostandfound.dto.response.PostListResponse;
-import com.example.lostandfound.dto.response.PostResponse;
-import com.example.lostandfound.dto.response.PostStatusResponse;
+import com.example.lostandfound.dto.response.*;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
@@ -116,8 +113,22 @@ public class PostService {
         // 주인 확인 완료 글만 받음 처리된 요청을 찾음
         Claim receivedClaim = post.isOwnerVerified() ? claimRepository.findFirstByPostIdAndStatus(postId, ClaimStatus.RECEIVED)
                                                        .orElse(null) : null;
+        // 보는 사람에 따라 하나 더 싣기
+        Long pendingClaimCount = null;
+        MyClaimSummaryResponse myClaim = null;
 
-        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl(), receivedClaim);
+        if (memberId != null) {
+            if (post.getMember().getId().equals(memberId)) {
+                pendingClaimCount = claimRepository.countByPostIdAndStatus(postId, ClaimStatus.PENDING);
+            } else {
+                myClaim = claimRepository.findByPostIdAndClaimantId(postId, memberId)
+                        .map(MyClaimSummaryResponse::from)
+                        .orElse(null);
+            }
+        }
+
+
+        return PostDetailResponse.from(post, comments, totalCommentCount, awsProperties.s3().baseUrl(), receivedClaim, pendingClaimCount, myClaim);
     }
 
     // 소유자 검증이 필요하므로 처리

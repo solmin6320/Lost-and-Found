@@ -595,6 +595,81 @@ eq(1L), any(Pageable.class)))
         assertThat(padded.verificationQuestion()).isEqualTo("안에 든 카드 색은?");
     }
 
+   @Test
+   @DisplayName("글쓴이가 상세를 보면 대기 요청 수가 실리고 내 요청은 없음")
+   void getDetails_author_hasPendingCount() {
+
+        Post post = createPost(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        given(claimRepository.countByPostIdAndStatus(1L, ClaimStatus.PENDING)).willReturn(2L);
+
+        PostDetailResponse response = postService.getDetail(1L, 1L); // 작성자가 조회
+
+       assertThat(response.pendingClaimCount()).isEqualTo(2L);
+       assertThat(response.myClaim()).isNull();
+       verify(claimRepository, never()).findByPostIdAndClaimantId(anyLong(), anyLong());
+   }
+
+   @Test
+   @DisplayName("요청을 보낸 사람이 상세를 보면 내 요청이 실리고 대기 요청 수는 없음")
+   void getDetail_claimant_hasMyClaim() {
+
+        Post post = createPost(1L, 1L);
+
+        Member claimant = Member.builder()
+                .email("claimant@test.com")
+                .password("encoded")
+                .nickname("요청자")
+                .build();
+
+        ReflectionTestUtils.setField(claimant, "id", 5L);
+
+        Claim claim = Claim.builder()
+                .post(post)
+                .claimant(claimant)
+                .answer("카드 두 장이 들어 있어요")
+                .build();
+        ReflectionTestUtils.setField(claim, "id", 10L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        given(claimRepository.findByPostIdAndClaimantId(1L, 5L)).willReturn(Optional.of(claim));
+
+        PostDetailResponse response = postService.getDetail(1L, 5L); // 요청자가 조회
+
+       assertThat(response.myClaim().id()).isEqualTo(10L);
+       assertThat(response.myClaim().status()).isEqualTo(ClaimStatus.PENDING);
+       assertThat(response.pendingClaimCount()).isNull();
+
+       verify(claimRepository, never()).countByPostIdAndStatus(anyLong(), any());
+   }
+
+   @Test
+   @DisplayName("비로그인이면 대기 요청 수와 내 요청 모두 없고 요청 조회도 하지 않음")
+   void getDetail_anonymous_noClaimInfo() {
+
+        Post post = createPost(1L, 1L);
+
+        given(postRepository.findDetailById(1L)).willReturn(Optional.of(post));
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(
+                eq(1L), any(Pageable.class)
+        )).willReturn(List.of());
+
+        PostDetailResponse response = postService.getDetail(1L, null);
+
+        assertThat(response.pendingClaimCount()).isNull();
+        assertThat(response.myClaim()).isNull();
+        verifyNoInteractions(claimRepository);
+   }
+
 
     private MultipartFile createFile(String filename) {
 

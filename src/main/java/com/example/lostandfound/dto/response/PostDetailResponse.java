@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
 
 // 상세 전용
 public record PostDetailResponse(
@@ -29,10 +28,13 @@ public record PostDetailResponse(
         long totalCommentCount,
         String verificationQuestion,
         boolean ownerVerified,
-        ReturnRecordResponse returnRecord
+        ReturnRecordResponse returnRecord,
+        Long pendingClaimCount,
+        MyClaimSummaryResponse myClaim
 ) {
 
-    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount, String imageBaseUrl, Claim receivedClaim) {
+    public static PostDetailResponse from(Post post, List<Comment> comments, long totalCommentCount, String imageBaseUrl, Claim receivedClaim,
+    Long pendingClaimCount, MyClaimSummaryResponse myClaim) {
 
         return new PostDetailResponse(
                 post.getId(),
@@ -57,7 +59,9 @@ public record PostDetailResponse(
                 totalCommentCount,
                 post.getVerificationQuestion(),
                 post.isOwnerVerified(),
-                receivedClaim == null ? null : ReturnRecordResponse.from(receivedClaim)
+                receivedClaim == null ? null : ReturnRecordResponse.from(receivedClaim),
+                pendingClaimCount,
+                myClaim
         );
     }
 }
