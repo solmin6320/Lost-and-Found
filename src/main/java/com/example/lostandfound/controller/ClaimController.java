@@ -65,6 +65,7 @@ public class ClaimController {
     }
 
     // PATCH /api/claims/{claimId}/reject
+    @PatchMapping("/claims/{claimId}/reject")
     public ResponseEntity<ClaimResponse> reject(
             @PathVariable Long claimId,
             @AuthenticationPrincipal CustomUserDetails userDetails
