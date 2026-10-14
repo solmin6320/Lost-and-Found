@@ -66,4 +66,10 @@ public class Member {
         this.password = encodedPassword;
         this.updatedAt = LocalDateTime.now();
     }
+
+    // 역할 변경(권한 검사는 서비스가 담당)
+    public void changeRole(Role role) {
+        this.role = role;
+        this.updatedAt = LocalDateTime.now();
+    }
 }

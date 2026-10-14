@@ -1,8 +1,10 @@
 package com.example.lostandfound.repository;
 
 import com.example.lostandfound.entity.Member;
+import com.example.lostandfound.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
@@ -18,4 +20,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 나를 제외한 다른 회원이 이 닉네임을 쓰는지 여부를 반환
     boolean existsByNicknameAndIdNot(String nickname, Long id);
+
+    // 역할로 찾기
+    List<Member> findAllByRole(Role role);
 }

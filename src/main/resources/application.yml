@@ -66,3 +66,7 @@ cors:
   allowed-origins: # 로컬 개발 기본값 - 운영은 application-prod.yml이 덮어씀
     - http://localhost:5173
     - http://localhost:3000
+
+# 관리자 - 이미 가입된 계정의 이메일
+admin:
+  emails: ${ADMIN_EMAILS:}
