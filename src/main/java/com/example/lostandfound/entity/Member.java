@@ -40,12 +40,18 @@ public class Member {
     // 수정 날짜
     private LocalDateTime updatedAt;
 
+    // 역할
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
+
     // Builder로만 객체 생성 가능하도록 강제(필드 임의 주입 방지)
     @Builder
     private Member(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.role = Role.USER;
         this.createdAt = LocalDateTime.now();
     }
 
