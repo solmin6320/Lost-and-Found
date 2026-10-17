@@ -2,10 +2,12 @@ package com.example.lostandfound.service;
 
 import com.example.lostandfound.config.AuthCookieProperties;
 import com.example.lostandfound.dto.request.LoginRequest;
+import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.jwt.JwtProperties;
 import com.example.lostandfound.jwt.JwtTokenProvider;
+import com.example.lostandfound.repository.MemberRepository;
 import com.example.lostandfound.security.CustomUserDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -54,6 +58,9 @@ class AuthServiceTest {
 
     @Mock
     private AuthCookieProperties cookieProperties;
+
+    @Mock
+    private MemberRepository memberRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -350,15 +357,22 @@ class AuthServiceTest {
 
     // 재발급 성공 경로에 필요한 스텁 모음
     private void givenReissueSucceeds() {
+        Member member = Member.builder()
+                .email("test@test.com")
+                .password("encoded")
+                .nickname("test")
+                .build();
 
         given(jwtTokenProvider.validateToken(REFRESH_TOKEN)).willReturn(true);
         given(jwtTokenProvider.isRefreshToken(REFRESH_TOKEN)).willReturn(true);
         given(jwtTokenProvider.getMemberId(REFRESH_TOKEN)).willReturn(1L);
         given(refreshTokenService.matches(1L, REFRESH_TOKEN)).willReturn(true);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
         given(jwtTokenProvider.createAccessToken(any())).willReturn("new-access-token");
         given(jwtTokenProvider.createRefreshToken(any())).willReturn("new-refresh-token");
         given(jwtProperties.accessTokenExpiration()).willReturn(300000L);
         given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
     }
+
 }
