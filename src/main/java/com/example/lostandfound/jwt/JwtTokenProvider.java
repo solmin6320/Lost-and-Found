@@ -1,5 +1,7 @@
 package com.example.lostandfound.jwt;
 
+import com.example.lostandfound.entity.Role;
+import com.example.lostandfound.security.CustomUserDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
@@ -20,6 +22,10 @@ public class JwtTokenProvider {
     private final JwtProperties jwtProperties;
     private final SecretKey secretKey;
 
+    private static final String ROLE_CLAIM = "role";
+
+
+
     // 생성자에서 SecretKey를 한 번만 만들어 필드에 보관
     // (매 토큰 생성/검증마다 Base64 디코딩을 반복하지 않기 위함)
     public JwtTokenProvider(JwtProperties jwtProperties) {
@@ -34,12 +40,12 @@ public class JwtTokenProvider {
 
     // 액세스 토큰 발급(5분)
     public String createAccessToken(Authentication authentication) {
-        return createToken(extractMemberId(authentication), jwtProperties.accessTokenExpiration(), "access");
+        return createToken(extractMemberId(authentication), jwtProperties.accessTokenExpiration(), "access", extractRole(authentication));
     }
 
     // 리프레시 토큰 발급(7일) -> Redis에 해시 저장
     public String createRefreshToken(Authentication authentication) {
-        return createToken(extractMemberId(authentication), jwtProperties.refreshTokenExpiration(), "refresh");
+        return createToken(extractMemberId(authentication), jwtProperties.refreshTokenExpiration(), "refresh", null);
     }
 
     // 인증 객체에서 회원 식별자 추출
@@ -50,8 +56,15 @@ public class JwtTokenProvider {
         return userDetails.getUsername();
     }
 
+    // 인증 객체에서 회원 역할 추출
+    private Role extractRole(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        return userDetails.getRole();
+    }
+
     // access + refresh 토큰의 공통 생성 로직
-    private String createToken(String memberId, long expiration, String category) {
+    private String createToken(String memberId, long expiration, String category, Role role) {
 
         // 발급 시각
         Date now = new Date();
@@ -61,15 +74,21 @@ public class JwtTokenProvider {
                 now.getTime() + expiration
         );
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .id(UUID.randomUUID().toString()) // jti(토큰 고유 번호)
                 .subject(memberId) // 토큰 주체(회원 식별자PK)
                 .claim("category", category) // 커스텀 클레임(토큰 구분)
                 .issuedAt(now) // iat(발급 시각)
-                .expiration(expiry) // exp(만료 시각)
-                .signWith(secretKey) // HMAC으로 서명(위조 방지)
-                .compact();
-    }
+                .expiration(expiry); // exp(만료 시각)
+
+            // 액세스 토큰에만 역할을 담음
+            if (role != null) {
+                builder.claim(ROLE_CLAIM, role.name());
+            }
+                return builder
+                        .signWith(secretKey) // HMAC으로 서명(위조 방지)
+                        .compact();
+        }
 
     // 토큰 파싱 + 서명 검증을 동시에 수행
     // 검증 실패 시 예외가 발생
@@ -86,6 +105,13 @@ public class JwtTokenProvider {
     // JWT의 sub는 String 타입 이므로 Long으로 바꿈
     public Long getMemberId(String token) {
         return Long.parseLong(parseClaims(token).getSubject());
+    }
+
+    // 토큰에서 회원 역할 추출
+    public Role getRole(String token) {
+        String role = parseClaims(token).get(ROLE_CLAIM, String.class);
+
+        return role == null ? Role.USER : Role.valueOf(role);
     }
 
     // 이 토큰이 리프레시 토큰인지 확인
