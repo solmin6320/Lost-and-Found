@@ -3,6 +3,7 @@ package com.example.lostandfound.service;
 import com.example.lostandfound.config.AuthCookieProperties;
 import com.example.lostandfound.dto.request.LoginRequest;
 import com.example.lostandfound.entity.Member;
+import com.example.lostandfound.entity.Role;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.jwt.JwtProperties;
@@ -305,6 +306,45 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("재발급 시 토큰이 아닌 DB의 현재 역할로 새 토큰을 만듬")
+    void reissue_usesCurrentRoleFromDb() {
+
+        givenReissueSucceeds(Role.MANAGER);
+
+        authService.reissue(REFRESH_TOKEN);
+
+        ArgumentCaptor<Authentication> captor = ArgumentCaptor.forClass(Authentication.class);
+
+        verify(jwtTokenProvider).createAccessToken(captor.capture());
+
+        CustomUserDetails userDetails = (CustomUserDetails) captor.getValue().getPrincipal();
+
+        assertThat(userDetails.getRole()).isEqualTo(Role.MANAGER);
+        assertThat(userDetails.getMemberId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("리프레시 토큰은 맞지만 회원이 없으면 401이고 토큰을 발급하지 않음")
+    void reissue_memberNotFound() {
+
+        given(jwtTokenProvider.validateToken(REFRESH_TOKEN)).willReturn(true);
+        given(jwtTokenProvider.isRefreshToken(REFRESH_TOKEN)).willReturn(true);
+        given(jwtTokenProvider.getMemberId(REFRESH_TOKEN)).willReturn(1L);
+        given(refreshTokenService.matches(1L, REFRESH_TOKEN)).willReturn(true);
+        given(memberRepository.findById(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                authService.reissue(REFRESH_TOKEN))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_REFRESH_TOKEN);
+
+        verify(jwtTokenProvider, never()).createAccessToken(any());
+        verify(refreshTokenService, never()).save(anyLong(), anyString());
+
+    }
+
+    @Test
     @DisplayName("로그아웃 시 Redis의 리프레시 토큰을 삭제")
     void logout_deletesRefreshToken() {
         authService.logout(1L);
@@ -357,11 +397,19 @@ class AuthServiceTest {
 
     // 재발급 성공 경로에 필요한 스텁 모음
     private void givenReissueSucceeds() {
+        givenReissueSucceeds(Role.USER);
+    }
+
+
+    // DB의 현재 역할을 정해 재발급 성공 경로를 스텁
+    private void givenReissueSucceeds(Role role) {
         Member member = Member.builder()
                 .email("test@test.com")
                 .password("encoded")
                 .nickname("test")
                 .build();
+
+        member.changeRole(role);
 
         given(jwtTokenProvider.validateToken(REFRESH_TOKEN)).willReturn(true);
         given(jwtTokenProvider.isRefreshToken(REFRESH_TOKEN)).willReturn(true);
