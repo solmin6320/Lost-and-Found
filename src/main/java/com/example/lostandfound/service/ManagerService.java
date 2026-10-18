@@ -19,7 +19,7 @@ public class ManagerService {
     private final RefreshTokenService refreshTokenService;
 
     // 매니저 임명
-    @PreAuthorize("hasRole('ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void appoint(Long memberId) {
         Member member = findChangeableMember(memberId);
