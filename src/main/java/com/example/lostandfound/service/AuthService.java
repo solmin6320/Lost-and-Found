@@ -3,10 +3,13 @@ package com.example.lostandfound.service;
 import com.example.lostandfound.config.AuthCookieProperties;
 import com.example.lostandfound.dto.request.LoginRequest;
 import com.example.lostandfound.dto.response.LoginResponse;
+import com.example.lostandfound.entity.Member;
+import com.example.lostandfound.entity.Role;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.jwt.JwtProperties;
 import com.example.lostandfound.jwt.JwtTokenProvider;
+import com.example.lostandfound.repository.MemberRepository;
 import com.example.lostandfound.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
@@ -30,6 +33,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final LoginAttemptService loginAttemptService;
     private final AuthCookieProperties cookieProperties;
+    private final MemberRepository memberRepository;
 
     // 로그인 결과를 담는 내부 전달용 객체
     public record LoginResult(LoginResponse response, ResponseCookie cookie) {
@@ -79,7 +83,11 @@ public class AuthService {
 
             throw new CustomException(ErrorCode.REFRESH_TOKEN_MISMATCH);
         }
-        Authentication authentication = buildAuthentication(id);
+       // 역할은 DB에서 다시 읽음
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        Authentication authentication = buildAuthentication(id, member.getRole());
 
         String newAccessToken =
                 jwtTokenProvider.createAccessToken(authentication);
@@ -119,8 +127,8 @@ public class AuthService {
 
 
     // 토큰 발급에 필요한 최소 인증 객체 구성
-    private Authentication buildAuthentication(Long id) {
-        CustomUserDetails userDetails = new CustomUserDetails(id);
+    private Authentication buildAuthentication(Long id, Role role) {
+        CustomUserDetails userDetails = new CustomUserDetails(id, role);
 
         return new UsernamePasswordAuthenticationToken(
                 userDetails,

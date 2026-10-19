@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
 
-        ErrorCode errorCode = ErrorCode.FORBIDDEN_ACCESS;
+        ErrorCode errorCode = ErrorCode.ACCESS_DENIED;
 
         return ResponseEntity
                 .status(errorCode.getStatus()) // 403

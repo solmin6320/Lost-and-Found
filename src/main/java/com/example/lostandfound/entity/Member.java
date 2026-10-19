@@ -40,12 +40,18 @@ public class Member {
     // 수정 날짜
     private LocalDateTime updatedAt;
 
+    // 역할
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
+
     // Builder로만 객체 생성 가능하도록 강제(필드 임의 주입 방지)
     @Builder
     private Member(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.role = Role.USER;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -58,6 +64,12 @@ public class Member {
     // 비밀번호 변경(인코딩된 값을 받음)
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 역할 변경(권한 검사는 서비스가 담당)
+    public void changeRole(Role role) {
+        this.role = role;
         this.updatedAt = LocalDateTime.now();
     }
 }

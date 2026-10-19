@@ -1,0 +1,4 @@
+-- 회원 역할
+
+ALTER TABLE member
+ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'USER';

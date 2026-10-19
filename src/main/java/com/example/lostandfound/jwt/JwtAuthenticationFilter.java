@@ -1,5 +1,6 @@
 package com.example.lostandfound.jwt;
 
+import com.example.lostandfound.entity.Role;
 import com.example.lostandfound.security.CustomUserDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -37,7 +38,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // DB 조회 없이 토큰의 sub(id)만으로 UserDetails 구성
             Long id = jwtTokenProvider.getMemberId(token);
-            CustomUserDetails userDetails = new CustomUserDetails(id);
+
+            Role role = jwtTokenProvider.getRole(token);
+
+            CustomUserDetails userDetails = new CustomUserDetails(id, role);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(

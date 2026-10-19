@@ -23,6 +23,7 @@ public enum ErrorCode {
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 게시글입니다"),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글입니다"),
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "본인이 작성한 게시글, 댓글만 처리할 수 있습니다"),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "이 작업을 할 권한이 없습니다"),
     INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "완료된 게시글은 상태를 되돌릴 수 없습니다"),
 
     // 이미지 예외 처리(400, 413)
@@ -42,7 +43,12 @@ public enum ErrorCode {
     CLAIM_NOT_ACCEPTING(HttpStatus.CONFLICT, "게시중인 글에만 요청하거나 승인할 수 있습니다"),
     DUPLICATE_CLAIM(HttpStatus.CONFLICT, "이 글에는 이미 요청을 보냈습니다"),
     INVALID_CLAIM_STATUS(HttpStatus.CONFLICT, "지금 요청 상태에서는 할 수 없는 동작입니다"),
-    CLAIM_IN_PROGRESS(HttpStatus.CONFLICT, "승인된 요청이 있어 상태를 직접 바꿀 수 없습니다");
+    CLAIM_IN_PROGRESS(HttpStatus.CONFLICT, "승인된 요청이 있어 상태를 직접 바꿀 수 없습니다"),
+
+    // 역할 변경 예외 처리(409)
+    ADMIN_ROLE_LOCKED(HttpStatus.CONFLICT, "관리자 역할은 바꿀 수 없습니다"),
+    ALREADY_MANAGER(HttpStatus.CONFLICT, "이미 매니저인 회원입니다"),
+    NOT_MANAGER(HttpStatus.CONFLICT, "매니저가 아닌 회원입니다");
 
 
     private final HttpStatus status;

@@ -1,6 +1,7 @@
 package com.example.lostandfound.security;
 
 import com.example.lostandfound.entity.Member;
+import com.example.lostandfound.entity.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,6 +15,7 @@ public class CustomUserDetails implements UserDetails {
     private final Long id;
     private final Member member;
     private final String password;
+    private final Role role;
 
     // 원본 엔티티 접근용
     public Member getMember() {
@@ -25,13 +27,15 @@ public class CustomUserDetails implements UserDetails {
         this.id = member.getId();
         this.password = member.getPassword();
         this.member = member;
+        this.role = member.getRole();
     }
 
-    // 필터용(토큰의 id 만으로 생성)
-    public CustomUserDetails(Long id) {
+    // 필터, 재발급용(토큰의 id와 역할로 생성)
+    public CustomUserDetails(Long id, Role role) {
         this.id = id;
         this.password = null;
         this.member = null;
+        this.role = role;
     }
 
 
@@ -41,13 +45,17 @@ public class CustomUserDetails implements UserDetails {
         return id;
     }
 
+    // 회원 역할
+    public Role getRole() {
+        return role;
+    }
+
     // 사용자 권한 목록
-    // DB 명세서에 role 컬럼이 없기 때문에 모든 회원이 동일하게 ROLE_USER
-    // 추후 관리자 페이지 등 확장 가능
+    // 권한 기능 추가
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(
-                new SimpleGrantedAuthority("ROLE_USER")
+                new SimpleGrantedAuthority("ROLE_" + role.name())
         );
     }
 
