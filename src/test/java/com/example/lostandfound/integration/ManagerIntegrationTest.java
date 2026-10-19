@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 public class ManagerIntegrationTest extends IntegrationTestSupport {
 
@@ -99,6 +100,51 @@ public class ManagerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
 
+    }
+
+    @Test
+    @DisplayName("관리자는 닉네임, 이메일 일부와 역할로 회원을 찾음")
+    void searchMembers() throws Exception {
+
+        signup("other@test.com", "다른회원");
+
+        mockMvc.perform(post("/api/admin/managers/{id}", targetId).header(AUTHORIZATION, admin))
+                .andExpect(status().isNoContent());
+
+        // 닉네임 일부
+        mockMvc.perform(get("/api/admin/members").param("keyword", "대").header(AUTHORIZATION, admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(targetId))
+                .andExpect(jsonPath("$.content[0].role").value("MANAGER"));
+
+        // 이메일 일부(대소문자 무시)
+        mockMvc.perform(get("/api/admin/members").param("keyword", "OTHER@").header(AUTHORIZATION, admin))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].email").value("other@test.com"));
+
+        // 역할만
+        mockMvc.perform(get("/api/admin/members").param("role", "MANAGER").header(AUTHORIZATION, admin))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].nickname").value("대상"));
+
+        // 빈 검색어는 조건 없음
+        mockMvc.perform(get("/api/admin/members").param("keyword", "").header(AUTHORIZATION, admin))
+                .andExpect(jsonPath("$.content.length()").value(3));
+    }
+
+    @Test
+    @DisplayName("일반 회원이 관리자 API를 부르면 403")
+    void nonAdminGetsAccessDenied() throws Exception {
+        String user = bearerOf("user@test.com", "회원");
+
+        mockMvc.perform(get("/api/admin/members").header(AUTHORIZATION, user))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(post("/api/admin/managers/{id}", targetId).header(AUTHORIZATION, user))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     // 가입 -> DB에서 역할 지정 -> 로그인
