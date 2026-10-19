@@ -1,11 +1,14 @@
 package com.example.lostandfound.service;
 
+import com.example.lostandfound.dto.response.AdminMemberResponse;
 import com.example.lostandfound.entity.Member;
 import com.example.lostandfound.entity.Role;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,17 @@ public class ManagerService {
             throw new CustomException(ErrorCode.NOT_MANAGER);
         }
         changeRole(member, Role.USER);
+    }
+
+    // 회원 검색
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public Page<AdminMemberResponse> searchMembers(String keyword, Role role, Pageable pageable) {
+
+        String trimmed = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
+
+        return memberRepository.searchForAdmin(trimmed, role, pageable)
+                .map(AdminMemberResponse::from);
     }
 
     private Member findChangeableMember(Long memberId) {
