@@ -48,7 +48,10 @@ public enum ErrorCode {
     // 역할 변경 예외 처리(409)
     ADMIN_ROLE_LOCKED(HttpStatus.CONFLICT, "관리자 역할은 바꿀 수 없습니다"),
     ALREADY_MANAGER(HttpStatus.CONFLICT, "이미 매니저인 회원입니다"),
-    NOT_MANAGER(HttpStatus.CONFLICT, "매니저가 아닌 회원입니다");
+    NOT_MANAGER(HttpStatus.CONFLICT, "매니저가 아닌 회원입니다"),
+
+    // 알림 예외 처리(404)
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다");
 
 
     private final HttpStatus status;
