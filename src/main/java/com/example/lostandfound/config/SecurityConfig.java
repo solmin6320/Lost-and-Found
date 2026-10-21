@@ -21,6 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import jakarta.servlet.DispatcherType;
 
 import java.util.List;
 
@@ -81,6 +82,10 @@ public class SecurityConfig {
 
                 // 경로별 접근 권한
                 .authorizeHttpRequests(auth -> auth
+
+                        // SSE 같은 비동기 응답의 이어 쓰기
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+
                         //회원가입, 로그인, 토큰 재발급은 인증 없이 접근 가능
                         .requestMatchers("/api/auth/signup", "/api/auth/reissue", "/api/auth/login").permitAll()
 
