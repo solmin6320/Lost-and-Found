@@ -4,14 +4,17 @@ import com.example.lostandfound.dto.request.ClaimRequest;
 import com.example.lostandfound.dto.response.ClaimResponse;
 import com.example.lostandfound.dto.response.MyClaimResponse;
 import com.example.lostandfound.entity.Claim;
+import com.example.lostandfound.entity.NotificationType;
 import com.example.lostandfound.entity.Post;
 import com.example.lostandfound.entity.PostStatus;
+import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.ClaimRepository;
 import com.example.lostandfound.repository.MemberRepository;
 import com.example.lostandfound.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +31,7 @@ public class ClaimService {
     private final ClaimRepository claimRepository;
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 주인 확인 요청 보내기
     @PreAuthorize("isAuthenticated()")
@@ -57,7 +61,11 @@ public class ClaimService {
                 .answer(request.answer())
                 .build();
 
-        return ClaimResponse.from(claimRepository.save(claim));
+        Claim saved = claimRepository.save(claim);
+
+        publish(saved, NotificationType.CLAIM_REQUESTED, post.getMember().getId(), saved.getClaimant().getNickname());
+
+        return ClaimResponse.from(saved);
     }
 
     // 받은 요청 목록
@@ -101,6 +109,8 @@ public class ClaimService {
 
         claim.approve();
 
+        publish(claim, NotificationType.CLAIM_APPROVED, claim.getClaimant().getId(), post.getMember().getNickname());
+
         return ClaimResponse.from(claim);
     }
 
@@ -114,6 +124,8 @@ public class ClaimService {
         checkAuthor(claim.getPost(), memberId);
 
         claim.reject();
+
+        publish(claim, NotificationType.CLAIM_REJECTED, claim.getClaimant().getId(), claim.getPost().getMember().getNickname());
 
         return ClaimResponse.from(claim);
     }
@@ -150,5 +162,17 @@ public class ClaimService {
         if (!post.getMember().getId().equals(memberId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
         }
+    }
+
+    // 알림 발행
+    private void publish(Claim claim, NotificationType type, Long receiverId, String actorNickname) {
+        eventPublisher.publishEvent(new NotificationEvent(
+                receiverId,
+                type,
+                claim.getPost().getId(),
+                claim.getId(),
+                claim.getPost().getTitle(),
+                actorNickname
+        ));
     }
 }
