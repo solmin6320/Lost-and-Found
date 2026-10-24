@@ -19,8 +19,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // 안 읽은 알림 수
     long countByReceiverIdAndReadAtIsNull(Long receiverId);
 
-    // 재연결 때 놓친 알림
-    List<Notification> findByReceiverIdAndIdGreaterThanOrderByIdAsc(Long receiverId, Long lastId);
+    // 재연결 때 놓친 알림(최대 50개)
+    List<Notification> findTop50ByReceiverIdAndIdGreaterThanOrderByIdAsc(Long receiverId, Long lastId);
 
     // 모두 읽음
     @Modifying(clearAutomatically = true)
