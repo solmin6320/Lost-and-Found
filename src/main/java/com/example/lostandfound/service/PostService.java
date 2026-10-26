@@ -6,10 +6,12 @@ import com.example.lostandfound.dto.request.PostSearchCondition;
 import com.example.lostandfound.dto.request.PostUpdateRequest;
 import com.example.lostandfound.dto.response.*;
 import com.example.lostandfound.entity.*;
+import com.example.lostandfound.event.PostCreatedEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,7 @@ public class PostService {
     private final PostImageRepository postImageRepository;
     private final S3Service s3Service;
     private final AwsProperties awsProperties;
+    private final ApplicationEventPublisher eventPublisher;
     private final ClaimRepository claimRepository;
 
     // 상세 화면에 먼저 보여줄 댓글 수
@@ -73,6 +76,9 @@ public class PostService {
         for (MultipartFile file : uploadTarget) {
             postSaved.addImage(toPostImage(file, postSaved.getId()));
         }
+
+        // 커밋 뒤 매칭 계산
+        eventPublisher.publishEvent(new PostCreatedEvent(postSaved.getId()));
 
         return PostResponse.from(postSaved);
     }
