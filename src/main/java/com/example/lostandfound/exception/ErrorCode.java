@@ -51,7 +51,10 @@ public enum ErrorCode {
     NOT_MANAGER(HttpStatus.CONFLICT, "매니저가 아닌 회원입니다"),
 
     // 알림 예외 처리(404)
-    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다");
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다"),
+
+    // 매칭 예외 처리(404)
+    MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 후보입니다");
 
 
     private final HttpStatus status;
