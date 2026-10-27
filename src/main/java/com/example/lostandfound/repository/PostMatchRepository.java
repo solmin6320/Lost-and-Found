@@ -21,7 +21,7 @@ public interface PostMatchRepository extends JpaRepository<PostMatch, Long> {
 
     // 내 습득 글의 분실 후보
     @Query("select m from PostMatch m join fetch m.lostPost " +
-    "where m.found.id = :postId and m.dismissedByFound = false " +
+    "where m.foundPost.id = :postId and m.dismissedByFound = false " +
     "order by m.score desc, m.id desc")
     List<PostMatch> findCandidatesForFound(@Param("postId") Long postId);
 }

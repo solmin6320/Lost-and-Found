@@ -50,8 +50,9 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     // 매칭 후보
     @Query("select p from Post p " +
     "where p.type = :type " +
-    "and p.status = com.example.lostfound.entity.PostStatus.OPEN " +
-    "and p.category = :memberId " +
+    "and p.status = com.example.lostandfound.entity.PostStatus.OPEN " +
+    "and p.category = :category " +
+            "and p.member.id <> :memberId " +
     "and p.lostFoundDate between :from and :to")
     List<Post> findMatchCandidates(@Param("type")PostType type, @Param("category")PostCategory category, @Param("memberId") Long memberId, @Param("from")LocalDate from, @Param("to") LocalDate to);
 }
