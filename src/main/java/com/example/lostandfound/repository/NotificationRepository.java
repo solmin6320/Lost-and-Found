@@ -1,6 +1,7 @@
 package com.example.lostandfound.repository;
 
 import com.example.lostandfound.entity.Notification;
+import com.example.lostandfound.entity.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,6 +22,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 재연결 때 놓친 알림(최대 50개)
     List<Notification> findTop50ByReceiverIdAndIdGreaterThanOrderByIdAsc(Long receiverId, Long lastId);
+
+    // 오늘 받은 매칭 알림 수
+    long countByReceiverIdAndTypeAndCreatedAtAfter(Long receiverId, NotificationType type, LocalDateTime after);
 
     // 모두 읽음
     @Modifying(clearAutomatically = true)

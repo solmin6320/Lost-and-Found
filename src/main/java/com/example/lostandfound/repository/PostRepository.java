@@ -55,4 +55,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
             "and p.member.id <> :memberId " +
     "and p.lostFoundDate between :from and :to")
     List<Post> findMatchCandidates(@Param("type")PostType type, @Param("category")PostCategory category, @Param("memberId") Long memberId, @Param("from")LocalDate from, @Param("to") LocalDate to);
+
+    // 한 사람의 게시중 글 수
+    @Query("select count(p) from Post p " +
+    "where p.member.id = :memberId and p.type = :type " +
+    "and p.status = com.example.lostandfound.entity.PostStatus.OPEN")
+    long countOpenPosts(@Param("memberId") Long memberId, @Param("type") PostType type);
 }

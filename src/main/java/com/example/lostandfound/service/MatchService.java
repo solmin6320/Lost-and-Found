@@ -7,6 +7,7 @@ import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.event.PostCreatedEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
+import com.example.lostandfound.repository.NotificationRepository;
 import com.example.lostandfound.repository.PostImageRepository;
 import com.example.lostandfound.repository.PostMatchRepository;
 import com.example.lostandfound.repository.PostRepository;
@@ -23,6 +24,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,6 +41,10 @@ public class MatchService {
     private final ApplicationEventPublisher eventPublisher;
     private final PostImageRepository postImageRepository;
     private final AwsProperties awsProperties;
+    private final NotificationRepository notificationRepository;
+
+    static final int MAX_OPEN_LOST_POSTS = 5;
+    static final int MAX_MATCH_ALERTS_PER_DAY = 10;
 
     // 글 등록이 커밋된 뒤 별도 스레드에서 계산
     @Async
@@ -67,6 +73,11 @@ public class MatchService {
         boolean isLost = post.getType() == PostType.LOST;
         LocalDate date = post.getLostFoundDate();
 
+        // 분실 글을 많이 걸어 두고 습득 글을 흝는 것을 막음
+        if (isLost && postRepository.countOpenPosts(post.getMember().getId(), PostType.LOST) > MAX_OPEN_LOST_POSTS) {
+            return;
+        }
+
         // 분실일 <= 습득일 <= 분실일 + 14일
         List<Post> candidates = postRepository.findMatchCandidates(
                 isLost ? PostType.FOUND : PostType.LOST, post.getCategory(),
@@ -74,6 +85,9 @@ public class MatchService {
                 isLost ? date : date.minusDays(MatchScorer.MAX_DAYS),
                 isLost ? date.plusDays(MatchScorer.MAX_DAYS) : date
         );
+
+        // 이번 계산에서 사람마다 보낸 알림 수
+        Map<Long, Long> alerts = new HashMap<>();
 
         for (Post other : candidates) {
             Post lost = isLost ? post : other;
@@ -91,15 +105,18 @@ public class MatchService {
                             .score(matchScorer.score(lost, found))
                     .build());
 
-            eventPublisher.publishEvent(new NotificationEvent(
-                    other.getMember().getId(),
+            if (canAlert(other.getMember().getId(), alerts)) {
 
-                    NotificationType.MATCH_SUGGESTED,
-                    other.getId(),
-                    null,
-                    other.getTitle(),
-                    null
-            ));
+                eventPublisher.publishEvent(new NotificationEvent(
+                        other.getMember().getId(),
+
+                        NotificationType.MATCH_SUGGESTED,
+                        other.getId(),
+                        null,
+                        other.getTitle(),
+                        null
+                ));
+            }
         }
     }
 
@@ -179,5 +196,16 @@ public class MatchService {
                         view ->
                         baseUrl + "/" + view.getFilePath()
                 ));
+    }
+
+    // 하루 상한 안이면 알림 보냄
+    private boolean canAlert(Long receiverId, Map<Long, Long> alerts) {
+        long sentToday = notificationRepository.countByReceiverIdAndTypeAndCreatedAtAfter(
+                receiverId, NotificationType.MATCH_SUGGESTED,
+                LocalDate.now().atStartOfDay()
+        );
+        long sentNow = alerts.merge(receiverId, 1L, Long::sum); // 이번 알림 포함
+
+        return sentToday + sentNow <= MAX_MATCH_ALERTS_PER_DAY;
     }
 }

@@ -6,6 +6,7 @@ import com.example.lostandfound.dto.response.MatchResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.exception.ErrorCode;
+import com.example.lostandfound.repository.NotificationRepository;
 import com.example.lostandfound.repository.PostImageRepository;
 import com.example.lostandfound.repository.PostMatchRepository;
 import com.example.lostandfound.repository.PostRepository;
@@ -46,6 +47,9 @@ class MatchServiceTest {
     @Mock
     private PostImageRepository postImageRepository;
 
+    @Mock
+    private NotificationRepository notificationRepository;
+
     // 설정값은 목이 아니라 실제 객체
     private final AwsProperties awsProperties = new AwsProperties(
             "ap-northeast-2",
@@ -63,7 +67,7 @@ class MatchServiceTest {
     @BeforeEach
     void setUp() {
         matchService = new MatchService(postRepository, postMatchRepository, new MatchScorer(), eventPublisher,
-                postImageRepository, awsProperties);
+                postImageRepository, awsProperties, notificationRepository);
         owner = memberOf(1L, "owner@test.com", "주인");
         finder = memberOf(2L, "finder@test.com", "주운사람");
     }
