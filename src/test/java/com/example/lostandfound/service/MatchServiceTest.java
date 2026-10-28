@@ -236,6 +236,80 @@ class MatchServiceTest {
                 .isEqualTo(ErrorCode.MATCH_NOT_FOUND);
     }
 
+    @Test
+    @DisplayName("게시중 분실 글이 5개를 넘으면 새 분실 글은 매칭하지 않음")
+    void match_skipsWhenTooManyOpenLostPosts() {
+
+        Post lost = postOf(10L, owner, PostType.LOST, lostDate);
+
+        given(postRepository.findById(10L))
+                .willReturn(Optional.of(lost));
+        given(postRepository.countOpenPosts(1L, PostType.LOST))
+                .willReturn(6L);
+
+        matchService.match(10L);
+        verify(postRepository, never()).findMatchCandidates(any(), any(), anyLong(), any(), any());
+
+        verifyNoInteractions(postMatchRepository, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("게시중 분실 글이 딱 5개면 매칭함")
+    void match_allowsUpToLimit() {
+        Post lost = postOf(10L, owner, PostType.LOST, lostDate);
+
+        given(postRepository.findById(10L))
+                .willReturn(Optional.of(lost));
+        given(postRepository.findMatchCandidates(any(), any(), anyLong(), any(), any())).willReturn(List.of());
+
+        matchService.match(10L);
+
+        verify(postRepository).findMatchCandidates(any(), any(), anyLong(), any(), any());
+    }
+
+    @Test
+    @DisplayName("오늘 매칭 알림을 10개 받은 사람에게는 쌍만 저장하고 알리지 않음")
+    void match_skipsAlertOverDailyLimit() {
+        Post lost = postOf(10L, owner, PostType.LOST, lostDate);
+        Post found = postOf(20L, finder, PostType.FOUND, lostDate.plusDays(1));
+
+        given(postRepository.findById(20L))
+                .willReturn(Optional.of(found));
+        given(postRepository.findMatchCandidates(any(), any(), anyLong(), any(), any())).willReturn(List.of(lost));
+
+        given(postMatchRepository.findByLostPostIdAndFoundPostId(10L, 20L)).willReturn(Optional.empty());
+
+        given(notificationRepository.countByReceiverIdAndTypeAndCreatedAtAfter(eq(1L), eq(NotificationType.MATCH_SUGGESTED), any()))
+                .willReturn(10L);
+
+        matchService.match(20L);
+
+        verify(postMatchRepository).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("같은 계산 안에서 보낸 알림도 세어 하루 10개에서 멈춤")
+    void match_countsAlertsInSameRun() {
+        Post found = postOf(20L, finder, PostType.FOUND, lostDate.plusDays(1));
+
+        Post lost1 = postOf(10L, owner, PostType.LOST, lostDate);
+        Post lost2 = postOf(11L, owner, PostType.LOST, lostDate);
+
+        given(postRepository.findById(20L))
+                .willReturn(Optional.of(found));
+        given(postRepository.findMatchCandidates(any(), any(), anyLong(), any(), any())).willReturn(List.of(lost1, lost2));
+
+        given(postMatchRepository.findByLostPostIdAndFoundPostId(anyLong(), eq(20L))).willReturn(Optional.empty());
+
+        given(notificationRepository.countByReceiverIdAndTypeAndCreatedAtAfter(eq(1L), eq(NotificationType.MATCH_SUGGESTED), any()))
+                .willReturn(9L);
+
+        matchService.match(20L);
+
+        verify(postMatchRepository, times(2)).save(any());
+        verify(eventPublisher, times(1)).publishEvent(any(NotificationEvent.class));
+    }
 
 
     private Member memberOf(Long id, String email, String nickname) {
