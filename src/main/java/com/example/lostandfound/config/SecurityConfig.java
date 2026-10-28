@@ -92,6 +92,9 @@ public class SecurityConfig {
                         // 받은 확인 요청 목록은 로그인 필요
                         .requestMatchers(HttpMethod.GET, "/api/posts/*/claims").authenticated()
 
+                        // 매칭 후보 목록은 로그인 필요
+                        .requestMatchers(HttpMethod.GET, "/api/posts/*/matches").authenticated()
+
                         // 게시글 조회는 비로그인도 열람 가능
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
 

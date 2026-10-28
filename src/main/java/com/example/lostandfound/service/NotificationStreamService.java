@@ -46,7 +46,7 @@ public class NotificationStreamService {
         sendTo(emitter, memberId, connectionId, SseEmitter.event().name("connected").data("ok"));
 
         if (lastEventId != null) {
-            notificationRepository.findByReceiverIdAndIdGreaterThanOrderByIdAsc(memberId, lastEventId)
+            notificationRepository.findTop50ByReceiverIdAndIdGreaterThanOrderByIdAsc(memberId, lastEventId)
                     .forEach(n -> sendTo(emitter, memberId, connectionId, toEvent(n)));
         }
         return emitter;

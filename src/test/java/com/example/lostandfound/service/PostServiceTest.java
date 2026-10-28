@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.example.lostandfound.config.AwsProperties;
@@ -42,6 +43,9 @@ import java.util.Optional;
 // PostService 단위 테스트
 @ExtendWith(MockitoExtension.class)
 public class PostServiceTest {
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private PostRepository postRepository;
@@ -75,7 +79,7 @@ public class PostServiceTest {
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties, claimRepository);
+        postService = new PostService(postRepository, memberRepository, postViewService, commentRepository, postImageRepository,s3Service, awsProperties, eventPublisher, claimRepository);
     }
 
     @Test

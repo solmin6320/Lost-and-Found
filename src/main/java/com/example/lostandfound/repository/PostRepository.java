@@ -1,7 +1,9 @@
 package com.example.lostandfound.repository;
 
 import com.example.lostandfound.entity.Post;
+import com.example.lostandfound.entity.PostCategory;
 import com.example.lostandfound.entity.PostStatus;
+import com.example.lostandfound.entity.PostType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +13,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 // JPQL 사용(Method Query 사용 불가)
@@ -41,4 +45,20 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Post p where p.id = :id")
     Optional<Post> findByIdForUpdate(@Param("id") Long id);
+
+
+    // 매칭 후보
+    @Query("select p from Post p " +
+    "where p.type = :type " +
+    "and p.status = com.example.lostandfound.entity.PostStatus.OPEN " +
+    "and p.category = :category " +
+            "and p.member.id <> :memberId " +
+    "and p.lostFoundDate between :from and :to")
+    List<Post> findMatchCandidates(@Param("type")PostType type, @Param("category")PostCategory category, @Param("memberId") Long memberId, @Param("from")LocalDate from, @Param("to") LocalDate to);
+
+    // 한 사람의 게시중 글 수
+    @Query("select count(p) from Post p " +
+    "where p.member.id = :memberId and p.type = :type " +
+    "and p.status = com.example.lostandfound.entity.PostStatus.OPEN")
+    long countOpenPosts(@Param("memberId") Long memberId, @Param("type") PostType type);
 }
