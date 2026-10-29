@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +61,12 @@ public class PublicFoundSaver {
                             .build()));
         }
         return added;
+    }
+
+    // 습득일이 기준일보다 오래된 것 삭제
+    @Transactional
+    public int deleteOlderThan(LocalDate before) {
+        return publicFoundItemRepository.deleteOlderThan(before);
     }
 
     // 칸 길이를 넘으면 잘라서 저장 실패를 막음
