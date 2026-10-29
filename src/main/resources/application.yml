@@ -71,3 +71,8 @@ cors:
 # 관리자 - 이미 가입된 계정의 이메일
 admin:
   emails: ${ADMIN_EMAILS:}
+
+public-data:
+  enabled: ${PUBLIC_DATA_ENABLED:false}
+  service-key: ${PUBLIC_DATA_SERVICE_KEY:}
+  base-url: https://apis.data.go.kr/1320000
