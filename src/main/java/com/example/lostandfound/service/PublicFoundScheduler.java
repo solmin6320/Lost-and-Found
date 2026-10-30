@@ -20,6 +20,7 @@ public class PublicFoundScheduler {
     private final PublicDataProperties publicDataProperties;
     private final PublicFoundCollector publicFoundCollector;
     private final PublicFoundSaver publicFoundSaver;
+    private final PublicMatchService publicMatchService;
 
     private static final int KEEP_DAYS = 30;
 
@@ -45,6 +46,13 @@ public class PublicFoundScheduler {
     private void collect(PublicFoundSource source) {
         try {
             List<PublicFoundItem> added = publicFoundCollector.collect(source);
+
+            // 새로 들어온 습득물만 대조
+            try {
+                publicMatchService.matchItems(added);
+            } catch (Exception e) {
+                log.warn("공공 습득물 {} 대조 실패: {}", source, e.getMessage());
+            }
 
             log.info("공공 습득물 {} 새로 {}건", source, added.size());
         } catch (Exception e) {
