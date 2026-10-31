@@ -54,7 +54,10 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다"),
 
     // 매칭 예외 처리(404)
-    MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 후보입니다");
+    MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 후보입니다"),
+
+    // 공공 매칭 예외 처리(404)
+    PUBLIC_MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 공공 습득물 후보입니다");
 
 
     private final HttpStatus status;
