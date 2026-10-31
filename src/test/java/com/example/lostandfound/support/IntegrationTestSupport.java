@@ -78,6 +78,7 @@ public abstract class IntegrationTestSupport {
         jdbcTemplate.update("DELETE FROM post_image");
         jdbcTemplate.update("DELETE FROM post");
         jdbcTemplate.update("DELETE FROM member");
+        jdbcTemplate.update("DELETE FROM public_found_item");
 
         for (String prefix : REDIS_PREFIXES) {
             Set<String> keys = redisTemplate.keys(prefix + "*");

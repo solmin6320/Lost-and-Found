@@ -22,6 +22,9 @@ dependencies {
     // Web
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // 외부 API 호출
+    implementation 'org.springframework.boot:spring-boot-starter-restclient'
+
     // 인증/인가/시큐리티
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
