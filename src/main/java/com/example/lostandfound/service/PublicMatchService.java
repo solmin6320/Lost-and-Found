@@ -1,8 +1,11 @@
 package com.example.lostandfound.service;
 
+import com.example.lostandfound.dto.response.PublicMatchResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.event.PostCreatedEvent;
+import com.example.lostandfound.exception.CustomException;
+import com.example.lostandfound.exception.ErrorCode;
 import com.example.lostandfound.repository.NotificationRepository;
 import com.example.lostandfound.repository.PostRepository;
 import com.example.lostandfound.repository.PublicFoundItemRepository;
@@ -11,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +22,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,6 +111,52 @@ public class PublicMatchService {
                 saveAndAlert(lost, item, alerts);
             }
         }
+    }
+
+    // 내 분실 글의 공공 습득물 후보
+    @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
+    public List<PublicMatchResponse> getPublicMatches(Long postId, Long memberId) {
+        Post post = findMyPost(postId, memberId);
+
+        if (post.getType() != PostType.LOST) {
+            return List.of();
+        }
+
+        return publicMatchRepository.findCandidates(postId).stream()
+                .map(match -> {
+                    PublicFoundItem item = match.getPublicItem();
+                    long days = Math.abs(ChronoUnit.DAYS.between(post.getLostFoundDate(), item.getFoundDate()));
+
+                    return PublicMatchResponse.of(item, days, PublicMatchScorer.similarName(post, item));
+                })
+                .toList();
+    }
+
+    // 공공 습득물 후보 숨김
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public void dismiss(Long postId, Long itemId, Long memberId) {
+
+        findMyPost(postId, memberId);
+
+        PublicMatch match = publicMatchRepository.findByLostPostIdAndPublicItemId(postId, itemId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PUBLIC_MATCH_NOT_FOUND));
+
+        match.dismiss();
+    }
+
+    // 내 글인지 확인
+    private Post findMyPost(Long postId, Long memberId) {
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        return post;
     }
 
     // 새 쌍이면 저장하고 분실 글 주인에게 알림
