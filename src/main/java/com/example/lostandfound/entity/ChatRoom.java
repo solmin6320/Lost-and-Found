@@ -79,7 +79,6 @@ public class ChatRoom {
     // 승인 취소 -> 읽기만
     public void readOnly() {
         if (this.status == ChatRoomStatus.OPEN) {
-            this.status = ChatRoomStatus.READ_ONLY;
             this.closedAt = LocalDateTime.now();
         }
     }
