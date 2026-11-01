@@ -1,7 +1,6 @@
 package com.example.lostandfound.security;
 
 import com.example.lostandfound.repository.ChatRoomRepository;
-import com.example.lostandfound.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -20,7 +19,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ChatSubscribeInterceptor implements ChannelInterceptor {
 
-    private final ChatRoomService chatRoomService;
     private final ChatRoomRepository chatRoomRepository;
 
     private static final Pattern ROOM_TOPIC = Pattern.compile("^/topic/rooms/(\\d{1,18})$");
