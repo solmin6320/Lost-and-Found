@@ -25,6 +25,9 @@ dependencies {
     // 외부 API 호출
     implementation 'org.springframework.boot:spring-boot-starter-restclient'
 
+    // 채팅(WebSocket + STOMP)
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
     // 인증/인가/시큐리티
     implementation 'org.springframework.boot:spring-boot-starter-security'
 

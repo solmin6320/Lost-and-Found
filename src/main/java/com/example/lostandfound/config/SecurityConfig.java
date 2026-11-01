@@ -104,6 +104,9 @@ public class SecurityConfig {
                         // ALB 헬스체크
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 
+                        // 채팅 연결
+                        .requestMatchers("/ws").permitAll()
+
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
