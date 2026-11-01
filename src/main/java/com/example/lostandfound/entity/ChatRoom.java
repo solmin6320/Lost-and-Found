@@ -79,7 +79,7 @@ public class ChatRoom {
     // 승인 취소 -> 읽기만
     public void readOnly() {
         if (this.status == ChatRoomStatus.OPEN) {
-            this.closedAt = LocalDateTime.now();
+            this.status = ChatRoomStatus.READ_ONLY;
         }
     }
 
@@ -88,6 +88,21 @@ public class ChatRoom {
         if (this.status == ChatRoomStatus.OPEN) {
             this.status = ChatRoomStatus.CLOSED;
             this.closedAt = LocalDateTime.now();
+        }
+    }
+
+    // 읽음
+    public void markRead(Long memberId, Long messageId) {
+        if (writer.getId().equals(memberId)) {
+
+            if (writerLastReadId == null || writerLastReadId < messageId) {
+                writerLastReadId = messageId;
+            }
+
+        } else if (requester.getId().equals(memberId)) {
+            if (requesterLastReadId == null || requesterLastReadId < messageId) {
+                requesterLastReadId = messageId;
+            }
         }
     }
 

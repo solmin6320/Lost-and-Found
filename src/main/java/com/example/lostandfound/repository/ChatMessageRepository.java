@@ -1,6 +1,7 @@
 package com.example.lostandfound.repository;
 
 import com.example.lostandfound.entity.ChatMessage;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,4 +23,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             "and m.id > coalesce(case when r.writer.id = :memberId then r.writerLastReadId else r.requesterLastReadId end, 0) " +
             "group by m.room.id")
     List<Object[]> countUnread(@Param("roomIds") List<Long> roomIds, @Param("memberId") Long memberId);
+
+    // 지난 메시지
+    List<ChatMessage> findByRoomIdAndIdLessThanOrderByIdDesc(Long roomId, Long before, Limit limit);
+
+    // 방의 마지막 메시지 id
+    @Query("select max(m.id) from ChatMessage m where m.room.id = :roomId")
+    Long findLastId(@Param("roomId") Long roomId);
 }

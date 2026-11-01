@@ -12,10 +12,12 @@ import com.example.lostandfound.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Limit;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +40,8 @@ public class ChatRoomService {
     private static final String OPENED = "채팅방이 열렸어요. 전화번호 · 계좌번호 · 이메일은 자동으로 가려져요";
     private static final String CANCELED = "승인이 취소됐어요. 이제 대화는 읽기만 할 수 있어요";
     private static final String RECEIVED = "물건을 돌려받아 대화가 끝났어요";
-    private static final String ROOM_TOPIC = "/topic/rooms";
+    private static final String ROOM_TOPIC = "/topic/rooms/";
+    private static final int MAX_PAGE_SIZE = 50;
 
     @EventListener
     @Transactional
@@ -107,6 +110,36 @@ public class ChatRoomService {
                         unreadCounts.getOrDefault(room.getId(), 0L)))
                 .sorted(Comparator.comparing(ChatRoomResponse::lastMessageAt).reversed())
                 .toList();
+    }
+
+    // 지난 메시지
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getMessages(Long roomId, Long memberId, Long before, int size) {
+        findParticipantRoom(roomId, memberId);
+
+        long cursor = before == null ? Long.MAX_VALUE : before;
+
+        int limit = Math.clamp(size, 1, MAX_PAGE_SIZE);
+
+        return chatMessageRepository.findByRoomIdAndIdLessThanOrderByIdDesc(roomId, cursor, Limit.of(limit)).stream()
+                .map(ChatMessageResponse::from)
+                .toList();
+    }
+
+    // 읽음
+    @Transactional
+    public void markRead(Long roomId, Long memberId) {
+        ChatRoom room = findParticipantRoom(roomId, memberId);
+
+        Long lastId = chatMessageRepository.findLastId(roomId);
+
+        if (lastId != null) {
+            room.markRead(memberId, lastId);
+        }
+
+        if (room.getClaim() != null) {
+            notificationRepository.markReadByClaim(memberId, NotificationType.CHAT_MESSAGE, room.getClaim().getId(), LocalDateTime.now());
+        }
     }
 
 
