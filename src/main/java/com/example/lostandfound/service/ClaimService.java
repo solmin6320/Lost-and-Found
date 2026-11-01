@@ -125,7 +125,7 @@ public class ClaimService {
 
         claim.reject();
 
-        eventPublisher.publishEvent(new ClaimStatusChangedEvent(claim.getId(), ClaimStatus.RECEIVED));
+        eventPublisher.publishEvent(new ClaimStatusChangedEvent(claim.getId(), ClaimStatus.REJECTED));
 
         publish(claim, NotificationType.CLAIM_REJECTED, claim.getClaimant().getId(), claim.getPost().getMember().getNickname());
 
