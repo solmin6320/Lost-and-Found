@@ -66,6 +66,11 @@ public class ChatRoomService {
         return ChatMessageResponse.from(message);
     }
 
+    @Transactional(readOnly = true)
+    public void checkParticipant(Long roomId, Long memberId) {
+        findParticipantRoom(roomId, memberId);
+    }
+
     // 방 찾고 당사자인지 확인
     private ChatRoom findParticipantRoom(Long roomId, Long memberId) {
         ChatRoom room = chatRoomRepository.findById(roomId)

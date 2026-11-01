@@ -1,6 +1,7 @@
 package com.example.lostandfound.config;
 
 import com.example.lostandfound.jwt.StompAuthChannelInterceptor;
+import com.example.lostandfound.security.ChatSubscribeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -17,6 +18,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final CorsProperties corsProperties;
     private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+    private final ChatSubscribeInterceptor chatSubscribeInterceptor;
 
     // 연결 주소
     @Override
@@ -30,7 +32,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
 
-        registry.enableSimpleBroker("/topic")
+        registry.enableSimpleBroker("/topic", "/queue")
                 .setHeartbeatValue(new long[] {10000, 10000})
                 .setTaskScheduler(heartbeatScheduler());
 
@@ -41,7 +43,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
 
-        registration.interceptors(stompAuthChannelInterceptor);
+        registration.interceptors(stompAuthChannelInterceptor, chatSubscribeInterceptor);
     }
 
     // 10초마다 HeartBeat
