@@ -19,4 +19,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             "and ((r.writer.id = :memberA and r.requester.id = :memberB) " +
             "or (r.writer.id = :memberB and r.requester.id = :memberA))")
     boolean existsBetween(@Param("memberA") Long memberA, @Param("memberB") Long memberB, @Param("status")ChatRoomStatus status);
+
+    // 방 당사자인지(구독 확인)
+    @Query("select count(r) > 0 from ChatRoom r " +
+            "where r.id = :roomId " +
+            "and (r.writer.id = :memberId or r.requester.id = :memberId)")
+    boolean isParticipant(@Param("roomId") Long roomId, @Param("memberId") Long memberId);
+
 }

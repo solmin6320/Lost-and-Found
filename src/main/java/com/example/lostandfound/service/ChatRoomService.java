@@ -4,15 +4,14 @@ import com.example.lostandfound.dto.response.ChatMessageResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.event.ChatMessageSentEvent;
 import com.example.lostandfound.event.ClaimStatusChangedEvent;
+import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
-import com.example.lostandfound.repository.ChatMessageRepository;
-import com.example.lostandfound.repository.ChatRoomRepository;
-import com.example.lostandfound.repository.ClaimRepository;
-import com.example.lostandfound.repository.MemberRepository;
+import com.example.lostandfound.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +25,13 @@ public class ChatRoomService {
     private final MemberRepository memberRepository;
     private final PersonalInfoMasker personalInfoMasker;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationRepository notificationRepository;
+    private final SimpUserRegistry simpUserRegistry;
 
     private static final String OPENED = "채팅방이 열렸어요. 전화번호 · 계좌번호 · 이메일은 자동으로 가려져요";
     private static final String CANCELED = "승인이 취소됐어요. 이제 대화는 읽기만 할 수 있어요";
     private static final String RECEIVED = "물건을 돌려받아 대화가 끝났어요";
+    private static final String ROOM_TOPIC = "/topic/rooms";
 
     @EventListener
     @Transactional
@@ -69,14 +71,12 @@ public class ChatRoomService {
         ChatMessageResponse response = ChatMessageResponse.from(message);
 
         eventPublisher.publishEvent(new ChatMessageSentEvent(response));
+        notifyIfAway(room, memberId);
 
         return response;
     }
 
-    @Transactional(readOnly = true)
-    public void checkParticipant(Long roomId, Long memberId) {
-        findParticipantRoom(roomId, memberId);
-    }
+
 
     // 방 찾고 당사자인지 확인
     private ChatRoom findParticipantRoom(Long roomId, Long memberId) {
@@ -88,6 +88,40 @@ public class ChatRoomService {
         }
 
         return room;
+    }
+
+    private void notifyIfAway(ChatRoom room, Long senderId) {
+        Long receiverId = room.getWriter().getId().equals(senderId)
+                ? room.getRequester().getId() : room.getWriter().getId();
+
+        Claim claim = room.getClaim(); // 열린 방이라 null 아님
+
+        if (isWatching(room.getId(), receiverId)) {
+            return;
+        }
+
+        if (notificationRepository.existsByReceiverIdAndTypeAndClaimIdAndReadAtIsNull(receiverId, NotificationType.CHAT_MESSAGE, claim.getId())) {
+            return;
+        }
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                receiverId,
+                NotificationType.CHAT_MESSAGE,
+                claim.getPost().getId(),
+                claim.getId(),
+                room.getPostTitle(),
+                memberRepository.getReferenceById(senderId).getNickname()
+        ));
+    }
+
+    // 상대가 이 방을 구독 중인지
+    private boolean isWatching(Long roomId, Long memberId) {
+        String destination = ROOM_TOPIC + roomId;
+        String memberName = String.valueOf(memberId);
+
+        return !simpUserRegistry.findSubscriptions(subscription ->
+                destination.equals(subscription.getDestination()) && memberName.equals(subscription.getSession().getUser().getName())
+        ).isEmpty();
     }
 
     // 승인 -> 방 생성

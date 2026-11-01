@@ -1,5 +1,6 @@
 package com.example.lostandfound.security;
 
+import com.example.lostandfound.repository.ChatRoomRepository;
 import com.example.lostandfound.service.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
@@ -20,6 +21,7 @@ import java.util.regex.Pattern;
 public class ChatSubscribeInterceptor implements ChannelInterceptor {
 
     private final ChatRoomService chatRoomService;
+    private final ChatRoomRepository chatRoomRepository;
 
     private static final Pattern ROOM_TOPIC = Pattern.compile("^/topic/rooms/(\\d{1,18})$");
     private static final String USER_PREFIX = "/user/";
@@ -49,11 +51,12 @@ public class ChatSubscribeInterceptor implements ChannelInterceptor {
         Matcher room = ROOM_TOPIC.matcher(destination);
 
         if (!room.matches()) {
-            throw new org.springframework.security.access.AccessDeniedException("구독할 수 없는 주소입니다");
+            throw new AccessDeniedException("구독할 수 없는 주소입니다");
         }
 
-        chatRoomService.checkParticipant(Long.valueOf(room.group(1)),
-                Long.valueOf(user.getName()));
+        if (!chatRoomRepository.isParticipant(Long.valueOf(room.group(1)), Long.valueOf(user.getName()))) {
+            throw new AccessDeniedException("이 대화방의 당사자가 아닙니다");
+        }
 
         return message;
     }
