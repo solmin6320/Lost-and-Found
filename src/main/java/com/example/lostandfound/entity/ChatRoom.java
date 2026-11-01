@@ -106,6 +106,20 @@ public class ChatRoom {
         }
     }
 
+    // 차단 -> 닫힘
+    public void block(Member blocker) {
+        if (this.status == ChatRoomStatus.BLOCKED) {
+            return;
+        }
+
+        this.status = ChatRoomStatus.BLOCKED;
+        this.blockedBy = blocker;
+
+        if (this.closedAt == null) {
+            this.closedAt = LocalDateTime.now();
+        }
+    }
+
     // 지금 상태
     public ChatRoomStatus currentStatus() {
         boolean claimGone = this.claim == null;

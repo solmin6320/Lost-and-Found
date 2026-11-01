@@ -50,4 +50,16 @@ public class ChatRoomController {
 
         return ResponseEntity.noContent().build();
     }
+
+    // POST /api/chat.rooms/{roomId}/block
+    @PostMapping("/{roomId}/block")
+    public ResponseEntity<Void> block(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+
+        chatRoomService.block(roomId, userDetails.getMemberId());
+
+        return ResponseEntity.noContent().build();
+    }
 }

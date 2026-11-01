@@ -42,6 +42,7 @@ public class ChatRoomService {
     private static final String RECEIVED = "물건을 돌려받아 대화가 끝났어요";
     private static final String ROOM_TOPIC = "/topic/rooms/";
     private static final int MAX_PAGE_SIZE = 50;
+    private static final String BLOCKED_NOTICE = "대화가 차단됐어요. 더 이상 메시지를 보낼 수 없어요";
 
     @EventListener
     @Transactional
@@ -143,6 +144,19 @@ public class ChatRoomService {
     }
 
 
+    // 차단(당사자 누구나)
+    @Transactional
+    public void block(Long roomId, Long memberId) {
+        ChatRoom room = findParticipantRoom(roomId, memberId);
+
+        if (room.getStatus() == ChatRoomStatus.BLOCKED) {
+            return;
+        }
+
+        room.block(memberRepository.getReferenceById(memberId));
+
+        addSystemMessage(room, BLOCKED_NOTICE);
+    }
 
     // 방 찾고 당사자인지 확인
     private ChatRoom findParticipantRoom(Long roomId, Long memberId) {
