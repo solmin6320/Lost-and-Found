@@ -24,35 +24,28 @@
 - MariaDB 11.4 · Flyway(V1 ~ V9) · QueryDSL 5.1
 - Redis 7 — 리프레시 토큰, 로그인 실패 횟수, 조회수 중복 방지
 - JWT(jjwt 0.12) · AWS S3(SDK v2)
-- 배포 : Docker · AWS EC2 · CloudFront(`/api/*`, `/ws` → EC2) · GitHub Actions(CI · CodeQL · 배포)
+- 배포 : Docker · AWS EC2 · CloudFront · GitHub Actions(CI · CodeQL · 배포)
 
-## 실행하기 (로컬)
+- EC2 보안 그룹은 8080을 CloudFront 접두사 목록에서만 연다(인터넷에서 직접 접근 불가)
+- 이벤트 흐름 — 상태가 바뀌는 곳은 이벤트만 던지고, 알림 · 채팅 전달 · 매칭은 리스너가 맡는다
 
-1. MariaDB · Redis 띄우기
+| 이벤트 | 받는 곳 | 시점 |
+|---|---|---|
+| `NotificationEvent` | 알림 저장 + SSE 전송 | 커밋 뒤(`AFTER_COMMIT`), 새 트랜잭션 |
+| `PostCreatedEvent` | 자동 매칭 · 공공 습득물 매칭 | 커밋 뒤, 비동기(`@Async`) |
+| `ClaimStatusChangedEvent` | 채팅방 생성 · 읽기 전용 · 닫기 | **같은 트랜잭션**(`@EventListener`) |
+| `ChatMessageSentEvent` | STOMP로 방에 전달 | 커밋 뒤 |
 
-   ```bash
-   docker compose up -d
-   ```
+## 설계 포인트
 
-2. `src/main/resources/application-local.yml` 준비 — 비밀값이 들어가므로 리포에 올리지 않습니다(`.gitignore`). 팀에서 받거나 아래 환경 변수 표를 보고 만듭니다
-
-3. 실행
-
-   ```bash
-   ./gradlew bootRun --args='--spring.profiles.active=local'
-   ```
-
-## 환경 변수
-
-| 이름 | 용도 |
-|---|---|
-| `DB_USERNAME` · `DB_PASSWORD` | MariaDB 계정 |
-| `JWT_SECRET` | JWT 서명 키 |
-| `CORS_ALLOWED_ORIGINS` | 허용 출처(`scheme://host[:port]`, 쉼표로 여러 개) |
-| `AWS_ACCESS_KEY` · `AWS_SECRET_KEY` | S3 업로드 자격 |
-| `AWS_S3_BUCKET` · `AWS_S3_BASE_URL` | 사진 버킷 · 사진 배포 주소 |
-| `ADMIN_EMAILS` | 시작할 때 관리자로 지정할 이메일 |
-| `PUBLIC_DATA_ENABLED` · `PUBLIC_DATA_SERVICE_KEY` | 경찰청 습득물 수집 켜기 · data.go.kr 서비스 키(디코딩 키) |
+- **채팅방은 요청 상태를 같은 트랜잭션에서 따라간다** — 승인은 됐는데 방이 없는 상태가 생기지 않게. 반대로 화면 전달은 커밋 뒤에만 해서 롤백된 메시지가 상대 화면에 먼저 뜨지 않는다
+- **개인정보는 저장 전에 가린다** — 전화번호 · 계좌번호 · 이메일을 서버가 가린 결과와 `masked` 여부만 저장한다(원문은 남기지 않음). 가리는 순서는 이메일 → 전화번호 → 계좌번호(전화번호가 계좌번호로 잡히지 않게), 날짜는 가리지 않는다
+- **채팅 구독은 숫자 방 id만 허용** — STOMP simple broker는 `*` 패턴 구독을 받아 주므로 `/topic/rooms/*`로 남의 방을 엿듣는 것을 인터셉터에서 막고, 방 당사자만 구독하게 한다
+- **채팅 알림은 방마다 한 줄** — 상대가 방을 보고 있으면(`SimpUserRegistry`) 알림을 만들지 않고, 같은 방의 안 읽은 알림이 있으면 새로 만들지 않는다
+- **방 · 메시지는 지우지 않는다** — 신고 증거로 남긴다. 글이 지워지면 요청 FK만 `ON DELETE SET NULL`이 되고, 그런 방은 닫힌 방으로 본다
+- **N+1 없이 목록 조회** — 대화방 목록은 방 수와 상관없이 쿼리 3번(방 + 마지막 메시지 + 안 읽은 수)
+- **공공데이터 XML은 DOCTYPE을 막고 읽는다** — XXE 방어
+- **리프레시 토큰은 쿠키(HttpOnly), 액세스 토큰은 Bearer** — 쿠키는 재발급 한 곳에만 쓰여 CSRF 범위를 좁힌다
 
 ## 테스트
 
@@ -99,4 +92,5 @@ src/main/resources/db/migration   Flyway 스키마(V1 ~ V9)
 
 ## 배포
 
-`main`에 push → CI(빌드 · 단위 · 통합 테스트 · Docker 이미지) 통과 → `Deploy` 워크플로가 EC2에 새 컨테이너를 띄운다. 운영 비밀값은 EC2 환경 변수로만 둔다.
+`main`에 push → CI(빌드 · 단위 · 통합 테스트 · Docker 이미지) 통과 → `Deploy` 워크플로가 EC2에 새 컨테이너를 띄운다.
+
