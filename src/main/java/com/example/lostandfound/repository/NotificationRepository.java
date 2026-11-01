@@ -29,6 +29,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // 오늘 받은 매칭 알림 수(일반 + 공공 합계)
     long countByReceiverIdAndTypeInAndCreatedAtAfter(Long receiverId, List<NotificationType> types, LocalDateTime after);
 
+    // 이 요청의 안 읽은 알림이 있는지
+    boolean existsByReceiverIdAndTypeAndClaimIdAndReadAtIsNull(Long receiveId, NotificationType type, Long claimId);
+
+    // 이 요청의 안 읽은 알림 읽음
+    @Modifying(flushAutomatically = true)
+    @Query("update Notification n set n.readAt = :now " +
+            "where n.receiver.id = :receiverId and n.type = :type and n.claimId = :claimId and n.readAt is null")
+    int markReadByClaim(@Param("receiverId") Long receiverId, @Param("type") NotificationType type,
+                        @Param("claimId") Long claimId, @Param("now") LocalDateTime now);
+
     // 모두 읽음
     @Modifying(clearAutomatically = true)
     @Query("update Notification n set n.readAt = :now " +

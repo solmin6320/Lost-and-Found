@@ -3,10 +3,8 @@ package com.example.lostandfound.service;
 import com.example.lostandfound.dto.request.ClaimRequest;
 import com.example.lostandfound.dto.response.ClaimResponse;
 import com.example.lostandfound.dto.response.MyClaimResponse;
-import com.example.lostandfound.entity.Claim;
-import com.example.lostandfound.entity.NotificationType;
-import com.example.lostandfound.entity.Post;
-import com.example.lostandfound.entity.PostStatus;
+import com.example.lostandfound.entity.*;
+import com.example.lostandfound.event.ClaimStatusChangedEvent;
 import com.example.lostandfound.event.NotificationEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
@@ -109,6 +107,8 @@ public class ClaimService {
 
         claim.approve();
 
+        eventPublisher.publishEvent(new ClaimStatusChangedEvent(claim.getId(), ClaimStatus.APPROVED));
+
         publish(claim, NotificationType.CLAIM_APPROVED, claim.getClaimant().getId(), post.getMember().getNickname());
 
         return ClaimResponse.from(claim);
@@ -125,7 +125,11 @@ public class ClaimService {
 
         claim.reject();
 
+        eventPublisher.publishEvent(new ClaimStatusChangedEvent(claim.getId(), ClaimStatus.REJECTED));
+
         publish(claim, NotificationType.CLAIM_REJECTED, claim.getClaimant().getId(), claim.getPost().getMember().getNickname());
+
+
 
         return ClaimResponse.from(claim);
     }
@@ -142,6 +146,8 @@ public class ClaimService {
         }
 
         claim.receive();
+
+        eventPublisher.publishEvent(new ClaimStatusChangedEvent(claim.getId(), ClaimStatus.RECEIVED));
 
         return ClaimResponse.from(claim);
     }

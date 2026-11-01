@@ -57,7 +57,12 @@ public enum ErrorCode {
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매칭 후보입니다"),
 
     // 공공 매칭 예외 처리(404)
-    PUBLIC_MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 공공 습득물 후보입니다");
+    PUBLIC_MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 공공 습득물 후보입니다"),
+
+    // 채팅 예외 처리(404, 403, 409)
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 대화방입니다"),
+    CHAT_ROOM_FORBIDDEN(HttpStatus.FORBIDDEN, "이 대화방의 당사자가 아닙니다"),
+    CHAT_ROOM_NOT_OPEN(HttpStatus.CONFLICT, "메시지를 보낼 수 없는 대화방입니다");
 
 
     private final HttpStatus status;
