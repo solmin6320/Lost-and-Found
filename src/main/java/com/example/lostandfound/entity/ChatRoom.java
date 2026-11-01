@@ -70,4 +70,28 @@ public class ChatRoom {
         this.status = ChatRoomStatus.OPEN;
         this.createdAt = LocalDateTime.now();
         }
+
+        // 방 당사자인지
+    public boolean isParticipant(Long memberId) {
+        return writer.getId().equals(memberId) || requester.getId().equals(memberId);
+    }
+
+    // 승인 취소 -> 읽기만
+    public void readOnly() {
+        if (this.status == ChatRoomStatus.OPEN) {
+            this.status = ChatRoomStatus.CLOSED;
+            this.closedAt = LocalDateTime.now();
+        }
+    }
+
+    // 지금 상태
+    public ChatRoomStatus currentStatus() {
+        boolean claimGone = this.claim == null;
+
+        if (claimGone && (this.status == ChatRoomStatus.OPEN || this.status == ChatRoomStatus.READ_ONLY)) {
+            return ChatRoomStatus.CLOSED;
+        }
+
+        return this.status;
+    }
 }
