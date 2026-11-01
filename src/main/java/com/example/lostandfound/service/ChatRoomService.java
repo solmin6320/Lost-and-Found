@@ -2,6 +2,7 @@ package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.response.ChatMessageResponse;
 import com.example.lostandfound.entity.*;
+import com.example.lostandfound.event.ChatMessageSentEvent;
 import com.example.lostandfound.event.ClaimStatusChangedEvent;
 import com.example.lostandfound.exception.CustomException;
 import com.example.lostandfound.exception.ErrorCode;
@@ -10,6 +11,7 @@ import com.example.lostandfound.repository.ChatRoomRepository;
 import com.example.lostandfound.repository.ClaimRepository;
 import com.example.lostandfound.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class ChatRoomService {
     private final ClaimRepository claimRepository;
     private final MemberRepository memberRepository;
     private final PersonalInfoMasker personalInfoMasker;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final String OPENED = "채팅방이 열렸어요. 전화번호 · 계좌번호 · 이메일은 자동으로 가려져요";
     private static final String CANCELED = "승인이 취소됐어요. 이제 대화는 읽기만 할 수 있어요";
@@ -63,7 +66,11 @@ public class ChatRoomService {
                         .masked(masked.masked())
                 .build());
 
-        return ChatMessageResponse.from(message);
+        ChatMessageResponse response = ChatMessageResponse.from(message);
+
+        eventPublisher.publishEvent(new ChatMessageSentEvent(response));
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -121,11 +128,13 @@ public class ChatRoomService {
     }
 
     private void addSystemMessage(ChatRoom room, String content) {
-        chatMessageRepository.save(ChatMessage.builder()
-                        .room(room)
-                        .type(ChatMessageType.SYSTEM)
-                        .content(content)
-                        .masked(false)
+        ChatMessage message = chatMessageRepository.save(ChatMessage.builder()
+                .room(room)
+                .type(ChatMessageType.SYSTEM)
+                .content(content)
+                .masked(false)
                 .build());
+
+        eventPublisher.publishEvent(new ChatMessageSentEvent(ChatMessageResponse.from(message)));
     }
 }
