@@ -1,6 +1,7 @@
 package com.example.lostandfound.service;
 
 import com.example.lostandfound.dto.response.ChatMessageResponse;
+import com.example.lostandfound.dto.response.ChatRoomResponse;
 import com.example.lostandfound.entity.*;
 import com.example.lostandfound.event.ChatMessageSentEvent;
 import com.example.lostandfound.event.ClaimStatusChangedEvent;
@@ -14,6 +15,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -74,6 +81,32 @@ public class ChatRoomService {
         notifyIfAway(room, memberId);
 
         return response;
+    }
+
+    // 내 대화방 목록
+    @Transactional(readOnly = true)
+    public List<ChatRoomResponse> getMyRooms(Long memberId) {
+
+        List<ChatRoom> rooms = chatRoomRepository.findAllByMember(memberId);
+
+        if (rooms.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> roomIds = rooms.stream().map(ChatRoom::getId).toList();
+
+        Map<Long, ChatMessage> lastMessages = chatMessageRepository.findLastMessages(roomIds).stream()
+                .collect(Collectors.toMap(message -> message.getRoom().getId(), Function.identity()));
+
+        Map<Long, Long> unreadCounts = chatMessageRepository.countUnread(roomIds, memberId).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return rooms.stream()
+                .map(room -> ChatRoomResponse.of(room, memberId,
+                        lastMessages.get(room.getId()),
+                        unreadCounts.getOrDefault(room.getId(), 0L)))
+                .sorted(Comparator.comparing(ChatRoomResponse::lastMessageAt).reversed())
+                .toList();
     }
 
 

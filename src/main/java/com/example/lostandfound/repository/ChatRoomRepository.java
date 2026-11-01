@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
@@ -25,5 +26,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             "where r.id = :roomId " +
             "and (r.writer.id = :memberId or r.requester.id = :memberId)")
     boolean isParticipant(@Param("roomId") Long roomId, @Param("memberId") Long memberId);
+
+    // 내 방 목록(두 사람, 요청을 함께)
+    @Query("select r from ChatRoom r " +
+            "join fetch r.writer " +
+            "join fetch r.requester " +
+            "left join fetch r.claim " +
+            "where r.writer.id = :memberId or r.requester.id = :memberId")
+    List<ChatRoom> findAllByMember(@Param("memberId") Long memberId);
 
 }
